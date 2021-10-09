@@ -1,3 +1,29 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<!-- Created by htmlize-1.57 in css mode. -->
+<html>
+  <head>
+    <title>init.org</title>
+    <style type="text/css">
+    <!--
+      body {
+        color: #ffffff;
+        background-color: #000000;
+      }
+
+      a {
+        color: inherit;
+        background-color: inherit;
+        font: inherit;
+        text-decoration: inherit;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+    -->
+    </style>
+  </head>
+  <body>
+    <pre>
 * Early-Init Code
 As of Emacs 27 (I think?) early-init.el is loaded earlier in the load sequence and is the proper place to do a few minor tweaks to help with improving load times.
 
@@ -93,7 +119,7 @@ However, when doing development, it's a good idea to set this back to =:warning=
 
 * Set up the init.el File
 
-  The very first thing that we should do is set up the init.el file itself.  This is just creating the file-header, setting up lexical binding, and turning off package initialization the old way. Which probably can be done away with since we're no longer running on something >=27.
+  The very first thing that we should do is set up the init.el file itself.  This is just creating the file-header, setting up lexical binding, and turning off package initialization the old way. Which probably can be done away with since we're no longer running on something &gt;=27.
   
 ** File Headers
 
@@ -195,7 +221,7 @@ However, when doing development, it's a good idea to set this back to =:warning=
     (defconst +my-interactive-p (not noninteractive)
       "If non-nil, Emacs is in interactive mode.")
     
-    (defconst IS-EMACS28+   (> emacs-major-version 27))
+    (defconst IS-EMACS28+   (&gt; emacs-major-version 27))
     (defconst IS-MAC     (eq system-type 'darwin))
     (defconst IS-LINUX   (eq system-type 'gnu/linux))
     (defconst IS-WINDOWS (memq system-type '(cygwin windows-nt ms-dos)))
@@ -236,9 +262,9 @@ However, when doing development, it's a good idea to set this back to =:warning=
     
     (defconst +my-local-dir
       (let ((localdir (getenv-internal "+MYLOCALDIR")))
-	(if localdir
-	    (expand-file-name (file-name-as-directory localdir))
-	  (concat +my-emacs-dir ".local/")))
+    (if localdir
+        (expand-file-name (file-name-as-directory localdir))
+      (concat +my-emacs-dir ".local/")))
       "Root directory for local storage.
     Use this as a storage location for this system's installation of +My Emacs.
     These files should not be shared across systems. By default, it is used by
@@ -258,14 +284,14 @@ However, when doing development, it's a good idea to set this back to =:warning=
     
     (defconst +my-private-dir
       (let ((+mydir (getenv-internal "+MYDIR")))
-	(if +mydir
-	    (expand-file-name (file-name-as-directory +mydir))
-	  (or (let ((xdgdir
-		     (expand-file-name "~/.config/+my/"
-				       (or (getenv-internal "XDG_CONFIG_HOME")
-					   "~/.config/+my/"))))
-		(if (file-directory-p xdgdir) xdgdir))
-	      "~/.config/+my/")))
+    (if +mydir
+        (expand-file-name (file-name-as-directory +mydir))
+      (or (let ((xdgdir
+             (expand-file-name "~/.config/+my/"
+                       (or (getenv-internal "XDG_CONFIG_HOME")
+                       "~/.config/+my/"))))
+        (if (file-directory-p xdgdir) xdgdir))
+          "~/.config/+my/")))
       "Where your private configuration is placed.
     Defaults to ~/.config/+my, ~/.+my.d or the value of the +MYDIR envvar;
     whichever is found first. Must end in a slash.")
@@ -416,22 +442,22 @@ Emacs creates a lot of cruft files, let's try to keep them under wraps.
 #+begin_src emacs-lisp :tangle init.el
   
   (setq-default async-byte-compile-log-file  (concat +my-etc-dir "async-bytecomp.log")
-	custom-file                  (concat +my-private-dir "custom.el")
-	desktop-dirname              (concat +my-etc-dir "desktop")
-	desktop-base-file-name       "autosave"
-	desktop-base-lock-name       "autosave-lock"
-	pcache-directory             (concat +my-cache-dir "pcache/")
-	request-storage-directory    (concat +my-cache-dir "request")
-	shared-game-score-directory  (concat +my-etc-dir "shared-game-score/"))
+    custom-file                  (concat +my-private-dir "custom.el")
+    desktop-dirname              (concat +my-etc-dir "desktop")
+    desktop-base-file-name       "autosave"
+    desktop-base-lock-name       "autosave-lock"
+    pcache-directory             (concat +my-cache-dir "pcache/")
+    request-storage-directory    (concat +my-cache-dir "request")
+    shared-game-score-directory  (concat +my-etc-dir "shared-game-score/"))
   
-  (defadvice! +my--write-to-etc-dir-a (orig-fn &rest args)
+  (defadvice! +my--write-to-etc-dir-a (orig-fn &amp;rest args)
     "Resolve Emacs storage directory to `+my-etc-dir', to keep local files from
   polluting `+my-emacs-dir'."
     :around #'locate-user-emacs-file
     (let ((user-emacs-directory +my-etc-dir))
       (apply orig-fn args)))
   
-  (defadvice! +my--write-enabled-commands-to-+my-a (orig-fn &rest args)
+  (defadvice! +my--write-enabled-commands-to-+my-a (orig-fn &amp;rest args)
     "When enabling a disabled command, the `put' call is written to
   ~/.emacs.d/init.el, which causes issues for Emacs, so write it to the user's
   config.el instead."
@@ -457,7 +483,7 @@ A collection of Doom and Spacemacs hacks to speed things up slightly, 'cause fas
   ;; this to `nil' in the past, but the `bidi-display-reordering's docs say that
   ;; is an undefined state and suggest this to be just as good:
   (setq-default bidi-display-reordering 'left-to-right
-		bidi-paragraph-direction 'left-to-right)
+        bidi-paragraph-direction 'left-to-right)
   
   ;; Disabling the BPA makes redisplay faster, but might produce incorrect display
   ;; reordering of bidirectional text with embedded parentheses and other bracket
@@ -486,8 +512,8 @@ A collection of Doom and Spacemacs hacks to speed things up slightly, 'cause fas
   ;; so we use `gcmh' to stave off the GC while we're using Emacs, and provoke it
   ;; when it's idle.
   (setq-default gcmh-idle-delay 5  ; default is 15s
-	gcmh-high-cons-threshold (* 16 1024 1024)  ; 16mb
-	gcmh-verbose +my-debug-p)
+    gcmh-high-cons-threshold (* 16 1024 1024)  ; 16mb
+    gcmh-verbose +my-debug-p)
   
   ;; Emacs "updates" its ui more often than it needs to, so slow it down slightly
   (setq idle-update-delay 1.0)  ; default is 0.5
@@ -510,8 +536,8 @@ A collection of Doom and Spacemacs hacks to speed things up slightly, 'cause fas
   ;; everything we can get.
   (when IS-WINDOWS
     (setq-default w32-get-true-file-attributes nil   ; decrease file IO workload
-	  w32-pipe-read-delay 0              ; faster IPC
-	  w32-pipe-buffer-size (* 64 1024))) ; read more at a time (was 4K)
+      w32-pipe-read-delay 0              ; faster IPC
+      w32-pipe-buffer-size (* 64 1024))) ; read more at a time (was 4K)
   
   ;; Remove command line options that aren't relevant to our current OS; means
   ;; slightly less to process at startup.
@@ -526,8 +552,8 @@ A collection of Doom and Spacemacs hacks to speed things up slightly, 'cause fas
     (advice-add #'tty-run-terminal-initialization :override #'ignore)
     (add-hook 'window-setup-hook 
       (defun my-init-tty-h ()
-	(advice-remove #'tty-run-terminal-initialization #'ignore)
-	(tty-run-terminal-initialization (selected-frame) nil t))))
+    (advice-remove #'tty-run-terminal-initialization #'ignore)
+    (tty-run-terminal-initialization (selected-frame) nil t))))
   
 #+end_src
 
@@ -546,7 +572,7 @@ A collection of Doom and Spacemacs hacks to speed things up slightly, 'cause fas
       (when (boundp 'libgnutls-version)
         (concat "SECURE128:+SECURE192:-VERS-ALL"
                 (if (and (not IS-WINDOWS)
-                         (>= libgnutls-version 30605))
+                         (&gt;= libgnutls-version 30605))
                     ":+VERS-TLS1.3")
                 ":+VERS-TLS1.2"))
       ;; `gnutls-min-prime-bits' is set based on recommendations from
@@ -770,7 +796,7 @@ A collection of Doom and Spacemacs hacks to speed things up slightly, 'cause fas
   ;; recent file
   ;;
   
-  (defvar recentf-max-menu-items) 	;dummy variable to kill warnings
+  (defvar recentf-max-menu-items)   ;dummy variable to kill warnings
   (recentf-mode 1)
   (setq recentf-max-menu-items 25)
   
@@ -839,7 +865,7 @@ Delay the loading of a package a certain amount of time
 #+begin_src emacs-lisp :tangle init.el
 
 (setup-define :delay
-   (lambda (&rest time)
+   (lambda (&amp;rest time)
      `(run-with-idle-timer ,(or time 1)
                            nil ;; Don't repeat
                            (lambda () (require ',(setup-get 'feature)))))
@@ -870,7 +896,7 @@ Load a package after another package is loaded.
 #+begin_src emacs-lisp :tangle init.el
 
 (setup-define :load-after
-    (lambda (features &rest body)
+    (lambda (features &amp;rest body)
       (let ((body `(progn
                      (require ',(setup-get 'feature))
                      ,@body)))
@@ -1009,7 +1035,7 @@ First, we need to have escape rebound and the universal argument key needs to be
 
 #+begin_src emacs-lisp :tangle init.el
   
-  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+  (global-set-key (kbd "&lt;escape&gt;") 'keyboard-escape-quit)
   (global-set-key (kbd "C-M-u") 'universal-argument)
   
 #+end_src
@@ -1072,7 +1098,7 @@ Evil mode requires using an undo package. I like undo-tree.
       ;; to loading.
       (defvar evil-want-C-g-bindings t)
       (defvar evil-want-C-i-jump nil)  ; we do this ourselves
-      (defvar evil-want-C-u-scroll t)  ; moved the universal arg to <leader> u
+      (defvar evil-want-C-u-scroll t)  ; moved the universal arg to &lt;leader&gt; u
       (defvar evil-want-C-u-delete t)
       (defvar evil-want-C-w-scroll t)
       (defvar evil-want-C-w-delete t)
@@ -1101,7 +1127,7 @@ Evil mode requires using an undo package. I like undo-tree.
        evil-undo-system 'undo-tree)
       (evil-select-search-module 'evil-search-module 'evil-search)
       (advice-add #'evil-visual-update-x-selection :override #'ignore)
-      (advice-add #'help-with-tutorial :after (lambda (&rest _) (evil-emacs-state +1)))
+      (advice-add #'help-with-tutorial :after (lambda (&amp;rest _) (evil-emacs-state +1)))
       (add-hook 'evil-mode-hook '+my-evil-hook))
     
     
@@ -1137,10 +1163,10 @@ Evil mode requires using an undo package. I like undo-tree.
     (global-unset-key (kbd "C-w"))
     (define-key global-map (kbd "C-w") nil)
     
-    (define-key global-map (kbd "C-<escape>") 'evil-normal-state)
+    (define-key global-map (kbd "C-&lt;escape&gt;") 'evil-normal-state)
     (define-key global-map (kbd "C-~") 'evil-normal-state)
-    (define-key global-map (kbd "M-<escape>") 'god-mode)
-    (define-key global-map (kbd "C-M-<escape>") 'god-local-mode)
+    (define-key global-map (kbd "M-&lt;escape&gt;") 'god-mode)
+    (define-key global-map (kbd "C-M-&lt;escape&gt;") 'god-local-mode)
     (define-key evil-normal-state-map (kbd "SPC") 'evil-execute-in-god-state)
     (define-key evil-visual-state-map (kbd "SPC") 'evil-execute-in-god-state)
     (define-key evil-normal-state-map (kbd "l") 'evil-forward-char)
@@ -1152,7 +1178,7 @@ Evil mode requires using an undo package. I like undo-tree.
 
 This evil/god combination should be the most ergonomic possible without manually remapping most bindings.
 
-I’ve bound C-<escape> and C-~ in particular because in term-mode it’s possible to get stuck in evil-god-state if you hit some combinations (I prefer C-<escape> but Windows intercepts this).
+I&#8217;ve bound C-&lt;escape&gt; and C-~ in particular because in term-mode it&#8217;s possible to get stuck in evil-god-state if you hit some combinations (I prefer C-&lt;escape&gt; but Windows intercepts this).
 
    
 *** Evil Magit
@@ -1539,13 +1565,13 @@ Grammarly? Others?
     :init (setq bibtex-completion-bibliography '("/home/david/Dropbox/Org/References/bibliography.bib")
                 bibtex-completion-library-path '("/home/david/Dropbox/Org/References/pdfs")
                 bibtex-completion-notes-path "/home/david/Dropbox/Org/roam/"
-                bibtex-completion-pdf-symbol "⌘"
-                bibtex-completion-notes-symbol "✎")
-    :bind-keymap ("<menu>" . helm-command-prefix)
+                bibtex-completion-pdf-symbol "&#8984;"
+                bibtex-completion-notes-symbol "&#9998;")
+    :bind-keymap ("&lt;menu&gt;" . helm-command-prefix)
     :bind (:map helm-command-map
                 ("b"      . helm-bibtex)
                 ("n"      . helm-bibtex-with-notes)
-                ("<menu>" . helm-resume)))
+                ("&lt;menu&gt;" . helm-resume)))
   
 #+end_src
 
@@ -1639,9 +1665,9 @@ IBuffer is awesome and builtin. So no package is needed. Just a hydra:
   (defhydra hydra-ibuffer-main (:color pink :hint nil)
     "
   ^Mark^         ^Actions^         ^View^          ^Select^              ^Navigation^
-  _m_: mark      _D_: delete       _g_: refresh    _q_: quit             _k_:   ↑    _h_
+  _m_: mark      _D_: delete       _g_: refresh    _q_: quit             _k_:   &#8593;    _h_
   _u_: unmark    _s_: save marked  _S_: sort       _TAB_: toggle         _RET_: visit
-  _*_: specific  _a_: all actions  _/_: filter     _o_: other window     _j_:   ↓    _l_
+  _*_: specific  _a_: all actions  _/_: filter     _o_: other window     _j_:   &#8595;    _l_
   _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
   "
     ("m" ibuffer-mark-forward)
@@ -1726,8 +1752,8 @@ IBuffer is awesome and builtin. So no package is needed. Just a hydra:
           ("c" ibuffer-filter-by-content "content")
           ("e" ibuffer-filter-by-predicate "predicate")
           ("f" ibuffer-filter-by-filename "filename")
-          (">" ibuffer-filter-by-size-gt "size")
-          ("<" ibuffer-filter-by-size-lt "size")
+          ("&gt;" ibuffer-filter-by-size-gt "size")
+          ("&lt;" ibuffer-filter-by-size-lt "size")
           ("/" ibuffer-filter-disable "disable")
           ("b" hydra-ibuffer-main/body "back" :color blue))
 
@@ -1919,7 +1945,6 @@ Just cause things need to be in sync
 
 *** Org-Ref
 
-**** The Org-Ref Package 
 
 #+begin_src emacs-lisp :tangle init.el
   (use-package org-ref
@@ -1940,27 +1965,15 @@ Just cause things need to be in sync
   
 #+end_src
 
-**** Open PDF at Point
-This function is needed to help fix the problem of finding a PDF file to edit (the =F1= key behavior).
 
-#+begin_src emacs-lisp :tangle init.el
-
-  (defun bibtex-completion-open-pdf-of-entry-at-point ()
-    (interactive)
-    (save-excursion
-      (bibtex-beginning-of-entry)
-      (when (looking-at bibtex-entry-maybe-empty-head)
-        (bibtex-completion-open-pdf (list (bibtex-key-in-head))))))
-
-#+end_src
 
 *** Org-Roam
-**** COMMENT Deft
+**** Deft
 
 #+begin_src emacs-lisp :tangle init.el
   
   (use-package deft
-    :bind ("<f8>" . deft)
+    :bind ("&lt;f8&gt;" . deft)
     :commands (deft)
     :config (setq deft-directory "~/Dropbox/"
                   deft-extensions '("txt" "tex" "org")
@@ -1979,11 +1992,11 @@ This function is needed to help fix the problem of finding a PDF file to edit (t
     :after org
     :straight t
     :init (setq org-roam-v2-ack t
-                +my-daily-note-filename "%<%Y-%m%-%d>.org"
-                +my-daily-note-header "#+title: %<%Y-%m-%d %a>\n\n[[roam:%<Y-%B>]]\n\n"
+                +my-daily-note-filename "%&lt;%Y-%m%-%d&gt;.org"
+                +my-daily-note-header "#+title: %&lt;%Y-%m-%d %a&gt;\n\n[[roam:%&lt;Y-%B&gt;]]\n\n"
                 org-roam-capture-templates  `(("d" "default" entry
                                                "* %?"
-                                               :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                                               :if-new (file+head "%&lt;%Y%m%d%H%M%S&gt;-${slug}.org"
                                                                   "#+title: ${title}\n")
                                                :unnarrowed t)
                                               ("b" "bibliography" entry
@@ -2012,7 +2025,7 @@ This function is needed to help fix the problem of finding a PDF file to edit (t
             ("C-c n I" . org-roam-node-insert-immediate)))
   
   
-  (defun org-roam-node-insert-immediate (arg &rest args)
+  (defun org-roam-node-insert-immediate (arg &amp;rest args)
     (interactive "P")
     (let ((args (push arg args))
           (org-roam-capture-templates (list (append (car org-roam-capture-templates)
@@ -2041,7 +2054,7 @@ This function is needed to help fix the problem of finding a PDF file to edit (t
                 (("C-c n a" . orb-note-actions))))
   
   (setq bibtex-completion-notes-path "/home/david/Dropbox/Org/roam/"
-        bibtex-completion-bibliography "/home/david/Dropbox/Org/References/bibliography.bib"
+        bibtex-completion-bibliography "home/david/Dropbox/Org/References/bibliography.bib"
         bibtex-compltion-pdf-field "file"
         bibtex-completion-notes-template-multiple-files
         (concat
@@ -2059,6 +2072,8 @@ This function is needed to help fix the problem of finding a PDF file to edit (t
          ":URL: ${url}\n"
          ":END:\n\n"))
 #+end_src
+
+
 
 
 **** Roam-UI
@@ -2108,7 +2123,7 @@ This function is needed to help fix the problem of finding a PDF file to edit (t
     :init
     (setq org-superstar-leading-bullet ?\s 
           org-superstar-remove-leading-stars t
-          org-superstar-headline-bullets-list '("◉" "○" "●" "○" "●" "○" "●")
+          org-superstar-headline-bullets-list '("&#9673;" "&#9675;" "&#9679;" "&#9675;" "&#9679;" "&#9675;" "&#9679;")
           org-indent-mode-turns-on-hiding-stars t)
     :hook (org-mode . org-superstar-mode))
   
@@ -2136,7 +2151,7 @@ This function is needed to help fix the problem of finding a PDF file to edit (t
 
     
 *** Org Tree Slide (Presentation)
-    =Org Tree Slide Mode= is for giving presentations from within org-mode using C-> and C-<
+    =Org Tree Slide Mode= is for giving presentations from within org-mode using C-&gt; and C-&lt;
 
     #+begin_src emacs-lisp :tangle init.el
       
@@ -2386,8 +2401,8 @@ A porciline for git. Basically, along with org-mode, this is one of the big reas
                 :desc "Next sticker"         "s" #'sly-stickers-next-sticker
                 :desc "Previous sticker"     "S" #'sly-stickers-prev-sticker)
                (:prefix ("h" . "help")
-                :desc "Who calls"               "<" #'sly-who-calls
-                :desc "Calls who"               ">" #'sly-calls-who
+                :desc "Who calls"               "&lt;" #'sly-who-calls
+                :desc "Calls who"               "&gt;" #'sly-calls-who
                 :desc "Lookup format directive" "~" #'hyperspec-lookup-format
                 :desc "Lookup reader macro"     "#" #'hyperspec-lookup-reader-macro
                 :desc "Apropos"                 "a" #'sly-apropos
@@ -2537,12 +2552,12 @@ Make Emacs my XWindow Manager
                           (interactive)
                           (exwm-workspace-switch-create ,i))))
                     (number-sequence 0 9))
-          ;; Bind "s-&" to launch applications ('M-&' also works if the output
+          ;; Bind "s-&amp;" to launch applications ('M-&amp;' also works if the output
           ;; buffer does not bother you).
-          ([?\s-&] . (lambda (command)
+          ([?\s-&amp;] . (lambda (command)
                        (interactive (list (read-shell-command "$ ")))
                        (start-process-shell-command command nil command)))
-          ;; Bind "s-<f2>" to "slock", a simple X display locker.
+          ;; Bind "s-&lt;f2&gt;" to "slock", a simple X display locker.
           ([s-f2] . (lambda ()
                       (interactive)
                       (start-process "" nil "/usr/bin/slock")))))
@@ -2638,7 +2653,10 @@ One of the very last things to do is to load the custom fil
   
 #+end_src
 
-# Local Variables:
+# Local Variables&#58;
 # eval: (add-hook 'after-save-hook (lambda () (my/tangle-init)))
 # End:
 
+</pre>
+  </body>
+</html>

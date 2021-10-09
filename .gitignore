@@ -5,8 +5,14 @@ etc/**
 eln-cache/**
 auto-save-list/**
 straight/**
-transient/**
+**/transient/**
 *.elc
 *.db
 *.*\~
-
+.local/**
+.cache/**
+.org-id-locations
+.last-package-update-day
+.gitignore
+**/**gpg
+**/**.elc

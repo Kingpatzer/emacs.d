@@ -1,0 +1,14 @@
+;; Emacs-W3 HTTP cookies file
+;; Automatically generated file!!! DO NOT EDIT!!!
+
+(setq url-cookie-storage
+ '(("data.doi.or.kr"
+  [url-cookie "WMONID" "P3CPJBoenx_" "Mon, 10-Oct-2022 24:21:43 GMT" "/" "data.doi.or.kr" nil]))
+)
+(setq url-cookie-secure-storage
+ 'nil)
+
+;; Local Variables:
+;; version-control: never
+;; no-byte-compile: t
+;; End:
