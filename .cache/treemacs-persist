@@ -1,0 +1,6 @@
+* Default
+** .emacs.d.david
+ - path :: ~/.emacs.d.david
+* No Perspective
+** .emacs.d
+ - path :: ~/.emacs.d

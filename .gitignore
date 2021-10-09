@@ -1,0 +1,12 @@
+#gitignore
+
+elpa/**
+etc/**
+eln-cache/**
+auto-save-list/**
+straight/**
+transient/**
+*.elc
+*.db
+*.*\~
+
