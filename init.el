@@ -61,6 +61,7 @@
 (defvar modus-themes-scale-small)
 (defvar modus-themes-scale-headings)
 (defvar modus-themes-variable-pitch-headings)
+(defvar org-image-actual-width)
 
 (defconst +my-file-version "1.0.0-beta"
   "Current version of My .init.el.")
@@ -486,6 +487,13 @@ Deactivates at first failt o prevent an infinite loop."
 (setq resize-mini-windows nil)           ; no resizing the mb
 
 ;;
+;; this variable needs to be set before
+;; loading straight to work around
+;; a problem with flycheck
+
+(setq-default straight-fix-flycheck t)
+
+;;
 ;; Make sure we have Straight intstalled
 ;;
 
@@ -509,6 +517,7 @@ Deactivates at first failt o prevent an infinite loop."
 
 (straight-use-package 'use-package)
 (setq-default straight-use-package-by-default t)
+(setq-default straight-check-for-modifications '(watch-files find-when-checking))
 
 (straight-use-package '(setup :type git :host nil :repo "https://git.sr.ht/~pkal/setup"))
 (require 'setup)
@@ -589,17 +598,18 @@ Deactivates at first failt o prevent an infinite loop."
 
 (use-package auto-package-update
   :straight t
-  :config (auto-package-update-maybe))
+  :config (auto-package-update-at-time "05:00"))
 
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 (global-set-key (kbd "C-M-u") 'universal-argument)
 
 (defun +my-evil-hook ()
-  (dolist (mode '(custom-mode
-                  eshell-mode
-                  git-rebase-mode
+  (dolist (mode '(eshell-mode
+                  proced-mode
+                  diff-mode
+                  dired-mode
                   term-mode))
-  (add-to-list 'evil-emacs-state-modes mode)))
+    (add-to-list 'evil-emacs-state-modes mode)))
 
 (defun +my-dont-arrow-me-bro ()
 (interactive)
@@ -611,74 +621,106 @@ Deactivates at first failt o prevent an infinite loop."
   (global-undo-tree-mode 1))
 
 (setq evil-want-keybinding nil)
-    (use-package evil
-      :straight t
-      :config
-      (evil-mode t)
-      (defvar +evil-repeat-keys (cons ";" ",")
+
+(use-package evil
+  :straight t
+  :config
+  (evil-mode t)
+  (defvar +evil-repeat-keys (cons ";" ",")
     "The keys to use for universal repeating motions.")
-      (defvar +evil-want-o/O-to-continue-comments t
+  (defvar +evil-want-o/O-to-continue-comments t
     "If non-nil, the o/O keys will continue comment lines if the point is on a line with a inewise comment.")
-      (defvar +evil-preprocessor-regexp "^\\s-*#[a-zA-Z0-9_]"
+  (defvar +evil-preprocessor-regexp "^\\s-*#[a-zA-Z0-9_]"
     "The regexp used by `+evil/next-preproc-directive' and
     `+evil/previous-preproc-directive' on ]# and [#, to jump between preprocessor
     directives. By default, this only recognizes C directives.")
 
-      ;; Set these defaults before `evil'; use `defvar' so they can be changed prior
-      ;; to loading.
-      (defvar evil-want-C-g-bindings t)
-      (defvar evil-want-C-i-jump nil)  ; we do this ourselves
-      (defvar evil-want-C-u-scroll t)  ; moved the universal arg to <leader> u
-      (defvar evil-want-C-u-delete t)
-      (defvar evil-want-C-w-scroll t)
-      (defvar evil-want-C-w-delete t)
-      (defvar evil-want-Y-yank-to-eol t)
-      (defvar evil-want-abbrev-expand-on-insert-exit nil)
-      (defvar evil-respect-visual-line-mode nil)
-      (setq 
-       evil-ex-search-vim-style-regexp t
-       evil-ex-visual-char-range t  ; column range for ex commands
-       evil-mode-line-format 'nil
-       ;; more vim-like behavior
-       evil-symbol-word-search t
-       ;; if the current state is obvious from the cursor's color/shape, then
-       ;; we won't need superfluous indicators to do it instead.
-       evil-default-cursor '+evil-default-cursor-fn
-       evil-normal-state-cursor 'box
-       evil-emacs-state-cursor  '(box +evil-emacs-cursor-fn)
-       evil-insert-state-cursor 'bar
-       evil-visual-state-cursor 'hollow
-       ;; Only do highlighting in selected window so that Emacs has less work
-       ;; to do highlighting them all.
-       evil-ex-interactive-search-highlight 'selected-window
-       ;; It's infuriating that innocuous "beginning of line" or "end of line"
-       ;; errors will abort macros, so suppress them:
-       evil-kbd-macro-suppress-motion-error t
-       evil-undo-system 'undo-tree)
-      (evil-select-search-module 'evil-search-module 'evil-search)
-      (advice-add #'evil-visual-update-x-selection :override #'ignore)
-      (advice-add #'help-with-tutorial :after (lambda (&rest _) (evil-emacs-state +1)))
-      (add-hook 'evil-mode-hook '+my-evil-hook))
+  ;; Set these defaults before `evil'; use `defvar' so they can be changed prior
+  ;; to loading.
+  (defvar evil-want-C-g-bindings t)
+  (defvar evil-want-C-i-jump nil)  ; we do this ourselves
+  (defvar evil-want-C-u-scroll t)  ; moved the universal arg to <leader> u
+  (defvar evil-want-C-u-delete t)
+  (defvar evil-want-C-w-scroll t)
+  (defvar evil-want-C-w-delete t)
+  (defvar evil-want-Y-yank-to-eol t)
+  (defvar evil-want-abbrev-expand-on-insert-exit nil)
+  (defvar evil-respect-visual-line-mode nil)
+  (setq 
+   evil-ex-search-vim-style-regexp t
+   evil-ex-visual-char-range t  ; column range for ex commands
+   evil-mode-line-format 'nil
+   ;; more vim-like behavior
+   evil-symbol-word-search t
+   ;; if the current state is obvious from the cursor's color/shape, then
+   ;; we won't need superfluous indicators to do it instead.
+   evil-default-cursor '+evil-default-cursor-fn
+   evil-normal-state-cursor 'box
+   evil-emacs-state-cursor  '(box +evil-emacs-cursor-fn)
+   evil-insert-state-cursor 'bar
+   evil-visual-state-cursor 'hollow
+   ;; Only do highlighting in selected window so that Emacs has less work
+   ;; to do highlighting them all.
+   evil-ex-interactive-search-highlight 'selected-window
+   ;; It's infuriating that innocuous "beginning of line" or "end of line"
+   ;; errors will abort macros, so suppress them:
+   evil-kbd-macro-suppress-motion-error t
+   evil-undo-system 'undo-tree)
+  (evil-select-search-module 'evil-search-module 'evil-search)
+  (advice-add #'evil-visual-update-x-selection :override #'ignore)
+  (advice-add #'help-with-tutorial :after (lambda (&rest _) (evil-emacs-state +1)))
+  (add-hook 'evil-mode-hook '+my-evil-hook))
 
 
-      (evil-global-set-key 'motion "j" 'evil-next-visual-line)
-      (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
+(evil-global-set-key 'motion "j" 'evil-next-visual-line)
+(evil-global-set-key 'motion "k" 'evil-previous-visual-line)
 
-    (use-package evil-collection
-      :straight t
-      :after evil
-      :init (setq evil-want-integration t)
-      :config (evil-collection-init))
 
-    (use-package evil-snipe
-      :straight t
-      :config
-      (evil-snipe-mode +1)
-      (evil-snipe-override-mode +1))
+(use-package evil-collection
+  :straight t
+  :after evil
+  :config (evil-collection-init))
+
+;; (use-package evil-snipe
+;;   :straight t
+;;   :config
+;;   (evil-snipe-mode +1)
+;;   (evil-snipe-override-mode +1))
+
+(use-package evil-leader
+  :straight t
+  :config (progn
+            (setq evil-leader/in-all-states t)
+            (global-evil-leader-mode)))
+
+(setq-default indent-tabs-mode)
+
+(use-package god-mode
+  :straight t)
+
+(use-package evil-god-state
+  :straight t)
+
+(global-unset-key (kbd "C-w"))
+(define-key global-map (kbd "C-w") nil)
+
+(define-key global-map (kbd "C-<escape>") 'evil-normal-state)
+(define-key global-map (kbd "C-~") 'evil-normal-state)
+(define-key global-map (kbd "M-<escape>") 'god-mode)
+(define-key global-map (kbd "C-M-<escape>") 'god-local-mode)
+(define-key evil-normal-state-map (kbd "SPC") 'evil-execute-in-god-state)
+(define-key evil-visual-state-map (kbd "SPC") 'evil-execute-in-god-state)
+(define-key evil-normal-state-map (kbd "l") 'evil-forward-char)
+(define-key evil-visual-state-map (kbd "l") 'evil-forward-char)
 
 (use-package evil-magit
   :straight t
   :after (evil magit))
+
+(use-package evil-exchange
+  :straight t
+  :after evil
+  :init (evil-exchange-install))
 
 (use-package general
   :straight t
@@ -754,9 +796,8 @@ Deactivates at first failt o prevent an infinite loop."
   :config (progn (load-theme 'modus-operandi t t)
                  (load-theme 'modus-vivendi t t)))
 
-(use-package auctex
-  :straight t
-  :defer t
+(use-package tex-site 
+  :straight  auctex
   :defines (TeX-auto-save
     TeX-parse-self
     reftex-plug-into-AUCTex)
@@ -773,42 +814,60 @@ Deactivates at first failt o prevent an infinite loop."
 
 (use-package ebib
   :straight t
-  :defer t
   :init
   :bind (("C-c e" . ebib)))
 
 (use-package company-auctex
-       :straight t
-       :defer t
-       )
+       :straight t)
 
 (use-package pdf-tools
     :straight t
-    :defer t
     :init (pdf-loader-install)
           (add-hook 'TeX-after-compilation-finished-functions #'TeX-revert-document-buffer))
 
 (use-package ispell
-                    :straight t   
-                    :defer t
-                    :init (setq ispell-dictionary "en_US"
-                        ispell-program-name "hunspell"))
+  :straight t   
+  :init (setq ispell-dictionary "en_US"
+              ispell-program-name "hunspell"))
 
 (use-package flyspell
-                   :straight t
-                   :defer t
-                   :init (dolist (hook '(text-mode-hook))
-                       (add-hook hook (lambda () (flyspell-mode 1))))
-                   :bind (("C-;" . flyspell-mode)
-                      ("C-:" . flyspell-check-next-highlighted-word)))
+  :straight t
+  :init (dolist (hook '(text-mode-hook))
+          (add-hook hook (lambda () (flyspell-mode 1))))
+  :bind (("C-c s-;" . flyspell-mode)
+         ("C-c s-." . flyspell-check-next-highlighted-word)))
 
 (use-package flycheck
   :straight t
-  :defer t
   :config (global-flycheck-mode))
 
 (use-package hydra
   :straight t)
+
+(use-package which-key
+  :straight t
+  :config (which-key-setup-side-window-bottom)
+  (setq which-key-show-early-on-C-h t
+        which-key-idle-secondary-delay 0.05)
+  :init (which-key-mode)
+  (which-key-enable-god-mode-support))
+
+(use-package edit-server
+  :ensure t
+  :commands edit-server-start
+  :init (if after-init-time
+              (edit-server-start)
+            (add-hook 'after-init-hook
+                      #'(lambda() (edit-server-start))))
+  :config (setq edit-server-new-frame-alist
+                '((name . "Edit with Emacs FRAME")
+                  (top . 200)
+                  (left . 200)
+                  (width . 80)
+                  (height . 25)
+                  (minibuffer . t)
+                  (menu-bar-lines . t)
+                  (window-system . x))))
 
 (use-package helm
   :straight t
@@ -830,9 +889,8 @@ Deactivates at first failt o prevent an infinite loop."
 
 (use-package helm-bibtex
   :straight t
-  :defer t
   :init (setq bibtex-completion-bibliography '("/home/david/Dropbox/Org/References/bibliography.bib")
-              bibtex-completion-library-path '("/home/david/Dropbox/pdfs")
+              bibtex-completion-library-path '("/home/david/Dropbox/Org/References/pdfs")
               bibtex-completion-notes-path "/home/david/Dropbox/Org/roam/"
               bibtex-completion-pdf-symbol "⌘"
               bibtex-completion-notes-symbol "✎")
@@ -875,6 +933,19 @@ Deactivates at first failt o prevent an infinite loop."
 (use-package company-try-hard
   :straight    
   :bind ("C-z" . company-try-hard))
+
+(global-unset-key (kbd "C-;"))
+  (global-unset-key (kbd "C-'"))
+
+(use-package avy
+  :straight t
+  :bind (("C-;" . avy-goto-char)
+         ("C-'" . avy-goto-char-2)
+         ("s-;" . avy-goto-word-1)
+         ("s-'" . avy-goto-word-0)))
+
+(use-package evil-avy
+  :straight t)
 
 (require 'ibuffer)
 
@@ -979,7 +1050,6 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
 
 (use-package treemacs
   :ensure t
-  :defer t
   :init
   (with-eval-after-load 'winum
     (define-key winum-keymap (kbd "M-0") #'treemacs-select-window))
@@ -1136,14 +1206,16 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
 (use-package org-ref
   :straight t
   :after org
-  :init (setq reftex-default-bibliography '("/home/david/Dropbox/School/References/bibliography.bib")
-              org-ref-bibliography-notes "/home/david/Dropbox/School/refrences/biblography.org"
-              org-ref-default-bibliogrpahy '("/home/david/Dropbox/School/References/bibliography.bib")
-              org-ref-pdf-directory "/home/david/Dropbox/pdfs/"
-              bibtex-completion-library-path "/home/david/Dropbox/pdfs"
+  :init (setq reftex-default-bibliography '("/home/david/Dropbox/Org/References/bibliography.bib")
+              org-ref-bibliography-notes "/home/david/Dropbox/Org/References/bibliography.bib"
+              org-ref-default-bibliogrpahy '("/home/david/Dropbox/Org/References/bibliography.bib")
+              org-ref-pdf-directory "/home/david/Dropbox/Org/References/pdfs/"
+              bibtex-completion-library-path "/home/david/Dropbox/Org/References/pdfs"
               bibtex-completion-notes-path "/home/david/Dropbox/Org/roam/"
               bitex-completion-pdf-open-function 'org-open-file
-              org-latex-pdf-process (list "latexmk -shell-escape -bibtex -f -pdf %f")))
+              org-latex-pdf-process (list "latexmk -shell-escape -bibtex -f -pdf %f")
+              org-ref-get-pdf-filename-function 'org-ref-get-pdf-file-name-helm-bibtex
+              org-ref-completion-library 'org-ref-helm-cite))
 
 (use-package deft
   :bind ("<f8>" . deft)
@@ -1187,11 +1259,19 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
           ("C-c n c" . org-roam-dailies-capture-today)
           ("C-c n g" . org-roam-graph)
           ("C-c n i" . org-roam-node-insert)
-          ("C-c n I" . org-roam-insert-immediate)))
+          ("C-c n I" . org-roam-node-insert-immediate)))
+
+
+(defun org-roam-node-insert-immediate (arg &rest args)
+  (interactive "P")
+  (let ((args (push arg args))
+        (org-roam-capture-templates (list (append (car org-roam-capture-templates)
+                                                  '(:immediate-finish t)))))
+    (apply #'org-roam-node-insert args)))
 
 (use-package org-roam-bibtex
   :straight t
-  :after org-roam
+  :after (org-roam org)
   :hook (org-roam-mode . org-roam-bibtex-mode)
   :config (setq orb-note-actions-interface 'hydra
                 orb-preformat-keywords '("citekey" "title" "url"
@@ -1203,16 +1283,35 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
   :bind (:map org-mode-map
               (("C-c n a" . orb-note-actions))))
 
+(setq bibtex-completion-notes-path "/home/david/Dropbox/Org/roam/"
+      bibtex-completion-bibliography "/home/david/Dropbox/Org/References/bibliography.bib"
+      bibtex-compltion-pdf-field "file"
+      bibtex-completion-notes-template-multiple-files
+      (concat
+       "#+TITLE: {title}\n"
+       "#+ROAM_KEY: cite:${=key=}\n"
+       "* TODO Notes\n"
+       ":PROPERTIES:\n"
+       ":Custom_ID: ${=key=}\n"
+       ":NOTER_DOCUMENT: %(orb-process-file-field \"${=key=}\")\n"
+       ":AUTHOR: ${author-abbrev}\n"
+       ":JOURNAL: ${journaltitle}\n"
+       ":DATE: ${date}\n"
+       ":YEAR: ${year}\n"
+       ":DOI: ${doi}\n"
+       ":URL: ${url}\n"
+       ":END:\n\n"))
+
 (use-package websocket
    :straight t
    )
 
 (use-package simple-httpd
-   :straight t
-   )
+   :straight t)
 
 (use-package org-roam-ui
   :straight (:host github :repo "org-roam/org-roam-ui" :branch "main" :files ("*.el" "out"))
+  :after org-roam
   :config (setq org-roam-ui-sync-theme t
                 org-roam-ui-follow t
                 org-roam-ui-update-on-save t
@@ -1228,15 +1327,17 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
         org-indent-mode-turns-on-hiding-stars t)
   :hook (org-mode . org-superstar-mode))
 
-(use-package org-noter
-  :straight t
-  :after org)
-
 (use-package org-tree-slide
   :straight t
-  :defer t
   :defines (org-image-actual-width)
   :config (org-image-actual-width nil))
+
+(use-package htmlize
+  :straight t
+  :init (setq htmlize-output-type 'css))
+
+(use-package projectile
+  :straight t)
 
 (use-package rainbow-delimiters
   :straight t 
@@ -1245,7 +1346,6 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
 
 (use-package magit
   :straight t 
-  :defer t
   :bind (("C-x g" . magit-status)))
 
 (use-package yasnippet
@@ -1284,17 +1384,21 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
 
 (general-define-key
  :states '(normal visual)
- "l"  '(:ignore t :which-key "lsp")
- "ld" 'xref-find-definitions
- "lr" 'xref-find-references
- "ln" 'lsp-ui-find-next-reference
- "lp" 'lsp-ui-find-prev-reference
- "lv" 'counsel-variable-documentation
- "le" 'lsp-ui-flycheck-list
- "lS" 'lsp-ui-sideline-symbol
- "lX" 'lsp-ui-sideline-code-action)
+ "L"  '(:ignore t :which-key "lsp")
+ "Ld" 'xref-find-definitions
+ "Lr" 'xref-find-references
+ "Ln" 'lsp-ui-find-next-reference
+ "Lp" 'lsp-ui-find-prev-reference
+ "Lv" 'counsel-variable-documentation
+ "Le" 'lsp-ui-flycheck-list
+ "LS" 'lsp-ui-sideline-symbol
+ "LX" 'lsp-ui-sideline-code-action)
 
 (setq inferior-lisp-program "/usr/bin/sbcl")
+
+(defun +my-temp-buffer-p (buf)
+  "Return non-nil if bufffer is temporary."
+  (equal (substring (buffer-name buf) 0 1) " "))
 
 (defun +common-lisp--cleanup-sly-maybe-h ()
   "Kill processes and leftover buffers when killing the last sly buffer."
@@ -1314,7 +1418,7 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
 
 (defun +common-lisp-init-sly-h ()
   "Attempt to auto-start sly when opening a lisp buffer."
-  (cond ((or (doom-temp-buffer-p (current-buffer))
+  (cond ((or (+my-temp-buffer-p (current-buffer))
              (sly-connected-p)))
         ((executable-find (car (split-string inferior-lisp-program)))
          (let ((sly-auto-start 'always))
@@ -1359,20 +1463,8 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
                           (agenda . 5)
                           (registers . 5))))
 
-(use-package projectile
-  :straight t
-   )
-
-
-
-(use-package which-key
-  :straight t
-  :config (which-key-setup-side-window-bottom)
-  (setq which-key-show-early-on-C-h t
-    which-key-idle-secondary-delay 0.05)
-  :init (which-key-mode))
-
-
-(setq debug-on-error nil)
-
 (load custom-file)
+
+(setq server-name "frodo")
+
+;;(server-start) I have emacs started by systemd now so this is not needed

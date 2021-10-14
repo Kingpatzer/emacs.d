@@ -1,5 +1,4 @@
 * Early-Init Code
-
 As of Emacs 27 (I think?) early-init.el is loaded earlier in the load sequence and is the proper place to do a few minor tweaks to help with improving load times.
 
 ** File Header
@@ -166,7 +165,7 @@ However, when doing development, it's a good idea to set this back to =:warning=
   (defvar modus-themes-scale-small)
   (defvar modus-themes-scale-headings)
   (defvar modus-themes-variable-pitch-headings)
-  
+  (defvar org-image-actual-width)
   
 #+end_src
 
@@ -573,7 +572,6 @@ A collection of Doom and Spacemacs hacks to speed things up slightly, 'cause fas
   
 #+end_src
 
-
 * Setting Up the Environment
 ** Formatting
 
@@ -787,6 +785,12 @@ A collection of Doom and Spacemacs hacks to speed things up slightly, 'cause fas
   The first thing we have to do is set up our package manager. I use straight.
 
   #+begin_src emacs-lisp :tangle init.el
+    ;;
+    ;; this variable needs to be set before
+    ;; loading straight to work around
+    ;; a problem with flycheck
+    
+    (setq-default straight-fix-flycheck t)
     
     ;;
     ;; Make sure we have Straight intstalled
@@ -812,10 +816,9 @@ A collection of Doom and Spacemacs hacks to speed things up slightly, 'cause fas
     
     (straight-use-package 'use-package)
     (setq-default straight-use-package-by-default t)
+    (setq-default straight-check-for-modifications '(watch-files find-when-checking)) 
     
     #+end_src
-
-
 
 ** Setup
 
@@ -954,7 +957,6 @@ I like to have my files auto-saved. This does so every 30 seconds for every open
   (add-hook 'auto-save-hook '+my-full-auto-save)
 #+end_src
 
-
 ** Terminal Setup
 
 While there's no real reason to have more than one terminal mode configured, I set up both eshell and vterm. Vterm because it's just a superior terminal experience to everything else, and eshell because it's so well integrated and it works on Windows.
@@ -962,7 +964,7 @@ While there's no real reason to have more than one terminal mode configured, I s
 *** VTERM
 
 #+begin_src emacs-lisp :tangle init.el
-
+  
   (use-package vterm
     :straight t
     :init (setq vterm-always-compile-module t)
@@ -988,20 +990,18 @@ While there's no real reason to have more than one terminal mode configured, I s
 
 #+end_src
 
-
 ** Auto-Updates
 
 Updating packages is a pain, so auto-update is a wonderful package that really saves a ton of time and agony.
 
 #+begin_src emacs-lisp :tangle init.el
-
-      (use-package auto-package-update
-        :straight t
-        :config (auto-package-update-maybe))
- 
-
+  
+  (use-package auto-package-update
+    :straight t
+    :config (auto-package-update-at-time "05:00"))
+  
+  
 #+end_src
-
 
 ** EVIL Mode
 
@@ -1021,11 +1021,12 @@ Now we should set up the mode list for Evil. This will be done in a custom hook.
 #+begin_src emacs-lisp :tangle init.el
   
   (defun +my-evil-hook ()
-    (dolist (mode '(custom-mode
-                    eshell-mode
-                    git-rebase-mode
+    (dolist (mode '(eshell-mode
+                    proced-mode
+                    diff-mode
+                    dired-mode
                     term-mode))
-    (add-to-list 'evil-emacs-state-modes mode)))
+      (add-to-list 'evil-emacs-state-modes mode)))
   
   (defun +my-dont-arrow-me-bro ()
   (interactive)
@@ -1041,10 +1042,10 @@ Evil mode requires using an undo package. I like undo-tree.
  #+begin_src emacs-lisp :tangle init.el
    
    
-             (use-package undo-tree
-               :straight t
-               :init (setq undo-tree-auto-save-history t)
-               (global-undo-tree-mode 1))
+   (use-package undo-tree
+     :straight t
+     :init (setq undo-tree-auto-save-history t)
+     (global-undo-tree-mode 1))
    
   #+end_src 
 
@@ -1053,72 +1054,105 @@ Evil mode requires using an undo package. I like undo-tree.
   #+begin_src emacs-lisp :tangle init.el
     
     (setq evil-want-keybinding nil)
-        (use-package evil
-          :straight t
-          :config
-          (evil-mode t)
-          (defvar +evil-repeat-keys (cons ";" ",")
+    
+    (use-package evil
+      :straight t
+      :config
+      (evil-mode t)
+      (defvar +evil-repeat-keys (cons ";" ",")
         "The keys to use for universal repeating motions.")
-          (defvar +evil-want-o/O-to-continue-comments t
+      (defvar +evil-want-o/O-to-continue-comments t
         "If non-nil, the o/O keys will continue comment lines if the point is on a line with a inewise comment.")
-          (defvar +evil-preprocessor-regexp "^\\s-*#[a-zA-Z0-9_]"
+      (defvar +evil-preprocessor-regexp "^\\s-*#[a-zA-Z0-9_]"
         "The regexp used by `+evil/next-preproc-directive' and
         `+evil/previous-preproc-directive' on ]# and [#, to jump between preprocessor
         directives. By default, this only recognizes C directives.")
     
-          ;; Set these defaults before `evil'; use `defvar' so they can be changed prior
-          ;; to loading.
-          (defvar evil-want-C-g-bindings t)
-          (defvar evil-want-C-i-jump nil)  ; we do this ourselves
-          (defvar evil-want-C-u-scroll t)  ; moved the universal arg to <leader> u
-          (defvar evil-want-C-u-delete t)
-          (defvar evil-want-C-w-scroll t)
-          (defvar evil-want-C-w-delete t)
-          (defvar evil-want-Y-yank-to-eol t)
-          (defvar evil-want-abbrev-expand-on-insert-exit nil)
-          (defvar evil-respect-visual-line-mode nil)
-          (setq 
-           evil-ex-search-vim-style-regexp t
-           evil-ex-visual-char-range t  ; column range for ex commands
-           evil-mode-line-format 'nil
-           ;; more vim-like behavior
-           evil-symbol-word-search t
-           ;; if the current state is obvious from the cursor's color/shape, then
-           ;; we won't need superfluous indicators to do it instead.
-           evil-default-cursor '+evil-default-cursor-fn
-           evil-normal-state-cursor 'box
-           evil-emacs-state-cursor  '(box +evil-emacs-cursor-fn)
-           evil-insert-state-cursor 'bar
-           evil-visual-state-cursor 'hollow
-           ;; Only do highlighting in selected window so that Emacs has less work
-           ;; to do highlighting them all.
-           evil-ex-interactive-search-highlight 'selected-window
-           ;; It's infuriating that innocuous "beginning of line" or "end of line"
-           ;; errors will abort macros, so suppress them:
-           evil-kbd-macro-suppress-motion-error t
-           evil-undo-system 'undo-tree)
-          (evil-select-search-module 'evil-search-module 'evil-search)
-          (advice-add #'evil-visual-update-x-selection :override #'ignore)
-          (advice-add #'help-with-tutorial :after (lambda (&rest _) (evil-emacs-state +1)))
-          (add-hook 'evil-mode-hook '+my-evil-hook))
+      ;; Set these defaults before `evil'; use `defvar' so they can be changed prior
+      ;; to loading.
+      (defvar evil-want-C-g-bindings t)
+      (defvar evil-want-C-i-jump nil)  ; we do this ourselves
+      (defvar evil-want-C-u-scroll t)  ; moved the universal arg to <leader> u
+      (defvar evil-want-C-u-delete t)
+      (defvar evil-want-C-w-scroll t)
+      (defvar evil-want-C-w-delete t)
+      (defvar evil-want-Y-yank-to-eol t)
+      (defvar evil-want-abbrev-expand-on-insert-exit nil)
+      (defvar evil-respect-visual-line-mode nil)
+      (setq 
+       evil-ex-search-vim-style-regexp t
+       evil-ex-visual-char-range t  ; column range for ex commands
+       evil-mode-line-format 'nil
+       ;; more vim-like behavior
+       evil-symbol-word-search t
+       ;; if the current state is obvious from the cursor's color/shape, then
+       ;; we won't need superfluous indicators to do it instead.
+       evil-default-cursor '+evil-default-cursor-fn
+       evil-normal-state-cursor 'box
+       evil-emacs-state-cursor  '(box +evil-emacs-cursor-fn)
+       evil-insert-state-cursor 'bar
+       evil-visual-state-cursor 'hollow
+       ;; Only do highlighting in selected window so that Emacs has less work
+       ;; to do highlighting them all.
+       evil-ex-interactive-search-highlight 'selected-window
+       ;; It's infuriating that innocuous "beginning of line" or "end of line"
+       ;; errors will abort macros, so suppress them:
+       evil-kbd-macro-suppress-motion-error t
+       evil-undo-system 'undo-tree)
+      (evil-select-search-module 'evil-search-module 'evil-search)
+      (advice-add #'evil-visual-update-x-selection :override #'ignore)
+      (advice-add #'help-with-tutorial :after (lambda (&rest _) (evil-emacs-state +1)))
+      (add-hook 'evil-mode-hook '+my-evil-hook))
     
     
-          (evil-global-set-key 'motion "j" 'evil-next-visual-line)
-          (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
+    (evil-global-set-key 'motion "j" 'evil-next-visual-line)
+    (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
     
-        (use-package evil-collection
-          :straight t
-          :after evil
-          :init (setq evil-want-integration t)
-          :config (evil-collection-init))
     
-        (use-package evil-snipe
-          :straight t
-          :config
-          (evil-snipe-mode +1)
-          (evil-snipe-override-mode +1))
+    (use-package evil-collection
+      :straight t
+      :after evil
+      :config (evil-collection-init))
+    
+    ;; (use-package evil-snipe
+    ;;   :straight t
+    ;;   :config
+    ;;   (evil-snipe-mode +1)
+    ;;   (evil-snipe-override-mode +1))
+    
+    (use-package evil-leader
+      :straight t
+      :config (progn
+                (setq evil-leader/in-all-states t)
+                (global-evil-leader-mode)))
+    
+    (setq-default indent-tabs-mode)
+    
+    (use-package god-mode
+      :straight t)
+    
+    (use-package evil-god-state
+      :straight t)
+    
+    (global-unset-key (kbd "C-w"))
+    (define-key global-map (kbd "C-w") nil)
+    
+    (define-key global-map (kbd "C-<escape>") 'evil-normal-state)
+    (define-key global-map (kbd "C-~") 'evil-normal-state)
+    (define-key global-map (kbd "M-<escape>") 'god-mode)
+    (define-key global-map (kbd "C-M-<escape>") 'god-local-mode)
+    (define-key evil-normal-state-map (kbd "SPC") 'evil-execute-in-god-state)
+    (define-key evil-visual-state-map (kbd "SPC") 'evil-execute-in-god-state)
+    (define-key evil-normal-state-map (kbd "l") 'evil-forward-char)
+    (define-key evil-visual-state-map (kbd "l") 'evil-forward-char)
+    
     
    #+end_src
+
+
+This evil/god combination should be the most ergonomic possible without manually remapping most bindings.
+
+I’ve bound C-<escape> and C-~ in particular because in term-mode it’s possible to get stuck in evil-god-state if you hit some combinations (I prefer C-<escape> but Windows intercepts this).
 
    
 *** Evil Magit
@@ -1126,14 +1160,25 @@ Evil mode requires using an undo package. I like undo-tree.
 Some Bindings for Magit and Evil.
 
 #+begin_src emacs-lisp :tangle init.el
-
+  
   (use-package evil-magit
     :straight t
     :after (evil magit))
-
+  
 #+end_src
 
+*** Evil Exchange
 
+This makes it so that in ~normal~ and ~visual~ mode =gx= exchanges text, basically it does a transposition. For example, gxhgx would transpose 1 letter.
+
+#+begin_src emacs-lisp :tangle init.el
+  
+  (use-package evil-exchange
+    :straight t
+    :after evil
+    :init (evil-exchange-install))
+  
+#+end_src
 
 ** General -- simplify key binding management
 
@@ -1160,8 +1205,6 @@ General helps with cleaning up key bindings, and
   :config (key-chord-mode 1))
   
 #+end_src
-
-
 
 ** Packages For Display Output
 
@@ -1203,11 +1246,11 @@ Visual fill column mode is a nice mode for doing soft-word wrap at 80 characters
   This package is used by the Doom modeline and is thus more or less necessary.
 
 #+begin_src emacs-lisp :tangle init.el
-
-      (use-package all-the-icons
-        :straight t
-      )
-
+  
+  (use-package all-the-icons
+    :straight t
+  )
+  
 #+end_src
 
 
@@ -1215,12 +1258,12 @@ Visual fill column mode is a nice mode for doing soft-word wrap at 80 characters
 **** Doom ModeLine
 
 #+begin_src emacs-lisp :tangle init.el
-
-      (use-package doom-modeline
-        :straight t
-        :init (doom-modeline-mode 1))
-      
-
+  
+  (use-package doom-modeline
+    :straight t
+    :init (doom-modeline-mode 1))
+  
+  
 #+end_src
 
 
@@ -1272,7 +1315,6 @@ I really like the Modus themes from [[https://protesilaos.com/modus-themes/][Pro
   
 #+end_src
 
-
 ** Packages for Latex
 
 *** AUCTex
@@ -1282,9 +1324,8 @@ AUCtex is a really powerful program and the full HTML manual is available [[http
 
 #+begin_src emacs-lisp :tangle init.el
   
-        (use-package auctex
-          :straight t
-          :defer t
+        (use-package tex-site 
+          :straight  auctex
           :defines (TeX-auto-save
             TeX-parse-self
             reftex-plug-into-AUCTex)
@@ -1295,7 +1336,6 @@ AUCtex is a really powerful program and the full HTML manual is available [[http
             LaTeX-electric-left-right-brace t))
   
 #+end_src
-
 
 
 *** AUCTex Latexmk
@@ -1323,7 +1363,6 @@ RefTeX helps to create unique labels and to find the correct key for references.
 
       (use-package ebib
         :straight t
-        :defer t
         :init
         :bind (("C-c e" . ebib)))
 
@@ -1343,11 +1382,8 @@ Company is a completion framework that is loaded a bit later. Therefore this nee
 #+begin_src emacs-lisp :tangle init.el
   
   (use-package company-auctex
-         :straight t
-         :defer t
-         )
-  
-  
+         :straight t)
+         
 #+end_src
 
 
@@ -1362,13 +1398,10 @@ Company is a completion framework that is loaded a bit later. Therefore this nee
   
   (use-package pdf-tools
       :straight t
-      :defer t
       :init (pdf-loader-install)
             (add-hook 'TeX-after-compilation-finished-functions #'TeX-revert-document-buffer))
   
 #+end_src
-
-
 
 ** Spelling, Syntax, and Grammar Checking
 
@@ -1377,32 +1410,26 @@ Company is a completion framework that is loaded a bit later. Therefore this nee
 Basic Spelling Support. I use ~hunspell~ and the en_US dictionary. 
 
 #+begin_src emacs-lisp :tangle init.el
-
- (use-package ispell
-                     :straight t   
-                     :defer t
-                     :init (setq ispell-dictionary "en_US"
-                         ispell-program-name "hunspell"))
-          
-
-
+  
+  (use-package ispell
+    :straight t   
+    :init (setq ispell-dictionary "en_US"
+                ispell-program-name "hunspell"))
+  
 #+end_src
 
 
 *** Flysell
 
 #+begin_src emacs-lisp :tangle init.el
-
+  
   (use-package flyspell
-                     :straight t
-                     :defer t
-                     :init (dolist (hook '(text-mode-hook))
-                         (add-hook hook (lambda () (flyspell-mode 1))))
-                     :bind (("C-;" . flyspell-mode)
-                        ("C-:" . flyspell-check-next-highlighted-word)))
-          
-
-
+    :straight t
+    :init (dolist (hook '(text-mode-hook))
+            (add-hook hook (lambda () (flyspell-mode 1))))
+    :bind (("C-c s-;" . flyspell-mode)
+           ("C-c s-." . flyspell-check-next-highlighted-word)))
+  
 #+end_src
 
 
@@ -1413,7 +1440,6 @@ Basic Spelling Support. I use ~hunspell~ and the en_US dictionary.
 
      (use-package flycheck
        :straight t
-       :defer t
        :config (global-flycheck-mode))
      
 #+end_src
@@ -1424,23 +1450,57 @@ Basic Spelling Support. I use ~hunspell~ and the en_US dictionary.
 Grammarly? Others? 
 
 ** Keybindings (Wichkey, Keymapping, Hydra)
+
 *** Hydra
+
     Allow for multi-headed key binding coolness
 
     #+begin_src emacs-lisp :tangle init.el
-
+      
       (use-package hydra
         :straight t)
-
+      
     #+end_src
+*** Which Key
 
-   
+#+begin_src emacs-lisp :tangle init.el
+  
+  (use-package which-key
+    :straight t
+    :config (which-key-setup-side-window-bottom)
+    (setq which-key-show-early-on-C-h t
+          which-key-idle-secondary-delay 0.05)
+    :init (which-key-mode)
+    (which-key-enable-god-mode-support))
+
+#+end_src
+
 ** Auto-saving
-
 ** Auto-Reverting
-
 ** External Editing
 
+=Edit-server= is a package that allows Google-chrome and similar browsers to utilize Emacs as an external editor.
+
+#+begin_src emacs-lisp :tangle init.el
+  
+  (use-package edit-server
+    :ensure t
+    :commands edit-server-start
+    :init (if after-init-time
+                (edit-server-start)
+              (add-hook 'after-init-hook
+                        #'(lambda() (edit-server-start))))
+    :config (setq edit-server-new-frame-alist
+                  '((name . "Edit with Emacs FRAME")
+                    (top . 200)
+                    (left . 200)
+                    (width . 80)
+                    (height . 25)
+                    (minibuffer . t)
+                    (menu-bar-lines . t)
+                    (window-system . x))))
+  
+#+end_src
 ** Completion System
 *** TODO Preserve Minibuffer History
 
@@ -1466,8 +1526,6 @@ Grammarly? Others?
              ("M-m"     . helm-mini)
              ("C-h a"   . helm-apropos)))
     
-    
-    
 #+end_src
 
 
@@ -1478,9 +1536,8 @@ Grammarly? Others?
   
   (use-package helm-bibtex
     :straight t
-    :defer t
     :init (setq bibtex-completion-bibliography '("/home/david/Dropbox/Org/References/bibliography.bib")
-                bibtex-completion-library-path '("/home/david/Dropbox/pdfs")
+                bibtex-completion-library-path '("/home/david/Dropbox/Org/References/pdfs")
                 bibtex-completion-notes-path "/home/david/Dropbox/Org/roam/"
                 bibtex-completion-pdf-symbol "⌘"
                 bibtex-completion-notes-symbol "✎")
@@ -1489,8 +1546,6 @@ Grammarly? Others?
                 ("b"      . helm-bibtex)
                 ("n"      . helm-bibtex-with-notes)
                 ("<menu>" . helm-resume)))
-  
-  
   
 #+end_src
 
@@ -1503,49 +1558,75 @@ Grammarly? Others?
 Company does completion at point for all kinds of things. It stands for "complete anything," and it means it. 
 
 #+begin_src emacs-lisp :tangle init.el
-
-      (use-package company
-        :straight t
-        :defines (company-idle-delay
-          company-tooltip-limit
-          company-minimum-prefix-length
-          company-tooltip-flip-when-above)
-        :config
-        (setq company-idle-delay 0.5
-          company-tooltip-limit 10
-          company-minimum-prefix-length 2
-          company-tooltip-flip-when-above t)
-        (add-hook 'after-init-hook 'global-company-mode))
-      
-     
-      (use-package company-bibtex
-       :straight t
-        )
-      
-      (use-package company-jedi
-        :straight t
-        )
-      
-      (use-package company-math
-        :straight t
-        )
-      
-      (use-package company-shell
-        :straight t
-        )
-      
-      (use-package company-try-hard
-        :straight    
-        :bind ("C-z" . company-try-hard))
-      
- 
-
+  
+  (use-package company
+    :straight t
+    :defines (company-idle-delay
+      company-tooltip-limit
+      company-minimum-prefix-length
+      company-tooltip-flip-when-above)
+    :config
+    (setq company-idle-delay 0.5
+      company-tooltip-limit 10
+      company-minimum-prefix-length 2
+      company-tooltip-flip-when-above t)
+    (add-hook 'after-init-hook 'global-company-mode))
+  
+  
+  (use-package company-bibtex
+   :straight t
+    )
+  
+  (use-package company-jedi
+    :straight t
+    )
+  
+  (use-package company-math
+    :straight t
+    )
+  
+  (use-package company-shell
+    :straight t
+    )
+  
+  (use-package company-try-hard
+    :straight    
+    :bind ("C-z" . company-try-hard))
+  
 #+end_src
 
 
 *** TODO Launching Apps
 
-** TODO Motion (Avy)
+** Motion 
+
+*** Avy - Jump to words and characters
+Avy allows us to jump to characters using a minimum number of character strokes.
+
+#+begin_src emacs-lisp :tangle init.el
+
+
+    (global-unset-key (kbd "C-;"))
+    (global-unset-key (kbd "C-'"))
+  
+  (use-package avy
+    :straight t
+    :bind (("C-;" . avy-goto-char)
+           ("C-'" . avy-goto-char-2)
+           ("s-;" . avy-goto-word-1)
+           ("s-'" . avy-goto-word-0)))
+
+#+end_src
+
+*** Evil-Avy
+Use the keys =f, F, t, T, w, b= to pick candidates.
+
+#+begin_src emacs-lisp :tangle init.el
+  
+  (use-package evil-avy
+    :straight t)
+  
+#+end_src
 
 ** Buffer Management
 
@@ -1657,114 +1738,111 @@ IBuffer is awesome and builtin. So no package is needed. Just a hydra:
 #+end_src
 
 
-
 ** Treemacs
    #+begin_src emacs-lisp :tangle init.el
-
-(use-package treemacs
-  :ensure t
-  :defer t
-  :init
-  (with-eval-after-load 'winum
-    (define-key winum-keymap (kbd "M-0") #'treemacs-select-window))
-  :config
-  (progn
-    (setq treemacs-collapse-dirs                   (if treemacs-python-executable 3 0)
-          treemacs-deferred-git-apply-delay        0.5
-          treemacs-directory-name-transformer      #'identity
-          treemacs-display-in-side-window          t
-          treemacs-eldoc-display                   t
-          treemacs-file-event-delay                5000
-          treemacs-file-extension-regex            treemacs-last-period-regex-value
-          treemacs-file-follow-delay               0.2
-          treemacs-file-name-transformer           #'identity
-          treemacs-follow-after-init               t
-          treemacs-expand-after-init               t
-          treemacs-git-command-pipe                ""
-          treemacs-goto-tag-strategy               'refetch-index
-          treemacs-indentation                     2
-          treemacs-indentation-string              " "
-          treemacs-is-never-other-window           nil
-          treemacs-max-git-entries                 5000
-          treemacs-missing-project-action          'ask
-          treemacs-move-forward-on-expand          nil
-          treemacs-no-png-images                   nil
-          treemacs-no-delete-other-windows         t
-          treemacs-project-follow-cleanup          nil
-          treemacs-persist-file                    (expand-file-name ".cache/treemacs-persist" user-emacs-directory)
-          treemacs-position                        'left
-          treemacs-read-string-input               'from-child-frame
-          treemacs-recenter-distance               0.1
-          treemacs-recenter-after-file-follow      nil
-          treemacs-recenter-after-tag-follow       nil
-          treemacs-recenter-after-project-jump     'always
-          treemacs-recenter-after-project-expand   'on-distance
-          treemacs-litter-directories              '("/node_modules" "/.venv" "/.cask")
-          treemacs-show-cursor                     nil
-          treemacs-show-hidden-files               t
-          treemacs-silent-filewatch                nil
-          treemacs-silent-refresh                  nil
-          treemacs-sorting                         'alphabetic-asc
-          treemacs-select-when-already-in-treemacs 'move-back
-          treemacs-space-between-root-nodes        t
-          treemacs-tag-follow-cleanup              t
-          treemacs-tag-follow-delay                1.5
-          treemacs-text-scale                      nil
-          treemacs-user-mode-line-format           nil
-          treemacs-user-header-line-format         nil
-          treemacs-width                           35
-          treemacs-width-is-initially-locked       t
-          treemacs-workspace-switch-cleanup        nil)
-
-    ;; The default width and height of the icons is 22 pixels. If you are
-    ;; using a Hi-DPI display, uncomment this to double the icon size.
-    ;;(treemacs-resize-icons 44)
-
-    (treemacs-follow-mode t)
-    (treemacs-filewatch-mode t)
-    (treemacs-fringe-indicator-mode 'always)
-
-    (pcase (cons (not (null (executable-find "git")))
-                 (not (null treemacs-python-executable)))
-      (`(t . t)
-       (treemacs-git-mode 'deferred))
-      (`(t . _)
-       (treemacs-git-mode 'simple)))
-
-    (treemacs-hide-gitignored-files-mode nil))
-  :bind
-  (:map global-map
-        ("M-0"       . treemacs-select-window)
-        ("C-x t 1"   . treemacs-delete-other-windows)
-        ("C-x t t"   . treemacs)
-        ("C-x t B"   . treemacs-bookmark)
-        ("C-x t C-t" . treemacs-find-file)
-        ("C-x t M-t" . treemacs-find-tag)))
-
-(use-package treemacs-evil
-  :after (treemacs evil)
-  :ensure t)
-
-(use-package treemacs-projectile
-  :after (treemacs projectile)
-  :ensure t)
-
-(use-package treemacs-icons-dired
-  :after (treemacs dired)
-  :ensure t
-  :config (treemacs-icons-dired-mode))
-
-(use-package treemacs-magit
-  :after (treemacs magit)
-  :ensure t)
-
-(use-package treemacs-persp ;;treemacs-perspective if you use perspective.el vs. persp-mode
-  :after (treemacs persp-mode) ;;or perspective vs. persp-mode
-  :ensure t
-  :config (treemacs-set-scope-type 'Perspectives))
-
+     
+     (use-package treemacs
+       :ensure t
+       :init
+       (with-eval-after-load 'winum
+         (define-key winum-keymap (kbd "M-0") #'treemacs-select-window))
+       :config
+       (progn
+         (setq treemacs-collapse-dirs                   (if treemacs-python-executable 3 0)
+               treemacs-deferred-git-apply-delay        0.5
+               treemacs-directory-name-transformer      #'identity
+               treemacs-display-in-side-window          t
+               treemacs-eldoc-display                   t
+               treemacs-file-event-delay                5000
+               treemacs-file-extension-regex            treemacs-last-period-regex-value
+               treemacs-file-follow-delay               0.2
+               treemacs-file-name-transformer           #'identity
+               treemacs-follow-after-init               t
+               treemacs-expand-after-init               t
+               treemacs-git-command-pipe                ""
+               treemacs-goto-tag-strategy               'refetch-index
+               treemacs-indentation                     2
+               treemacs-indentation-string              " "
+               treemacs-is-never-other-window           nil
+               treemacs-max-git-entries                 5000
+               treemacs-missing-project-action          'ask
+               treemacs-move-forward-on-expand          nil
+               treemacs-no-png-images                   nil
+               treemacs-no-delete-other-windows         t
+               treemacs-project-follow-cleanup          nil
+               treemacs-persist-file                    (expand-file-name ".cache/treemacs-persist" user-emacs-directory)
+               treemacs-position                        'left
+               treemacs-read-string-input               'from-child-frame
+               treemacs-recenter-distance               0.1
+               treemacs-recenter-after-file-follow      nil
+               treemacs-recenter-after-tag-follow       nil
+               treemacs-recenter-after-project-jump     'always
+               treemacs-recenter-after-project-expand   'on-distance
+               treemacs-litter-directories              '("/node_modules" "/.venv" "/.cask")
+               treemacs-show-cursor                     nil
+               treemacs-show-hidden-files               t
+               treemacs-silent-filewatch                nil
+               treemacs-silent-refresh                  nil
+               treemacs-sorting                         'alphabetic-asc
+               treemacs-select-when-already-in-treemacs 'move-back
+               treemacs-space-between-root-nodes        t
+               treemacs-tag-follow-cleanup              t
+               treemacs-tag-follow-delay                1.5
+               treemacs-text-scale                      nil
+               treemacs-user-mode-line-format           nil
+               treemacs-user-header-line-format         nil
+               treemacs-width                           35
+               treemacs-width-is-initially-locked       t
+               treemacs-workspace-switch-cleanup        nil)
+     
+         ;; The default width and height of the icons is 22 pixels. If you are
+         ;; using a Hi-DPI display, uncomment this to double the icon size.
+         ;;(treemacs-resize-icons 44)
+     
+         (treemacs-follow-mode t)
+         (treemacs-filewatch-mode t)
+         (treemacs-fringe-indicator-mode 'always)
+     
+         (pcase (cons (not (null (executable-find "git")))
+                      (not (null treemacs-python-executable)))
+           (`(t . t)
+            (treemacs-git-mode 'deferred))
+           (`(t . _)
+            (treemacs-git-mode 'simple)))
+     
+         (treemacs-hide-gitignored-files-mode nil))
+       :bind
+       (:map global-map
+             ("M-0"       . treemacs-select-window)
+             ("C-x t 1"   . treemacs-delete-other-windows)
+             ("C-x t t"   . treemacs)
+             ("C-x t B"   . treemacs-bookmark)
+             ("C-x t C-t" . treemacs-find-file)
+             ("C-x t M-t" . treemacs-find-tag)))
+     
+     (use-package treemacs-evil
+       :after (treemacs evil)
+       :ensure t)
+     
+     (use-package treemacs-projectile
+       :after (treemacs projectile)
+       :ensure t)
+     
+     (use-package treemacs-icons-dired
+       :after (treemacs dired)
+       :ensure t
+       :config (treemacs-icons-dired-mode))
+     
+     (use-package treemacs-magit
+       :after (treemacs magit)
+       :ensure t)
+     
+     (use-package treemacs-persp ;;treemacs-perspective if you use perspective.el vs. persp-mode
+       :after (treemacs persp-mode) ;;or perspective vs. persp-mode
+       :ensure t
+       :config (treemacs-set-scope-type 'Perspectives))
+     
    #+end_src
-
 
 
 ** Org Mode
@@ -1841,38 +1919,54 @@ Just cause things need to be in sync
 
 *** Org-Ref
 
+**** The Org-Ref Package 
 
 #+begin_src emacs-lisp :tangle init.el
   (use-package org-ref
     :straight t
     :after org
-    :init (setq reftex-default-bibliography '("/home/david/Dropbox/School/References/bibliography.bib")
-                org-ref-bibliography-notes "/home/david/Dropbox/School/refrences/biblography.org"
-                org-ref-default-bibliogrpahy '("/home/david/Dropbox/School/References/bibliography.bib")
-                org-ref-pdf-directory "/home/david/Dropbox/pdfs/"
-                bibtex-completion-library-path "/home/david/Dropbox/pdfs"
+    :init (setq reftex-default-bibliography '("/home/david/Dropbox/Org/References/bibliography.bib")
+                org-ref-bibliography-notes "/home/david/Dropbox/Org/References/bibliography.bib"
+                org-ref-default-bibliogrpahy '("/home/david/Dropbox/Org/References/bibliography.bib")
+                org-ref-pdf-directory "/home/david/Dropbox/Org/References/pdfs/"
+                bibtex-completion-library-path "/home/david/Dropbox/Org/References/pdfs"
                 bibtex-completion-notes-path "/home/david/Dropbox/Org/roam/"
                 bitex-completion-pdf-open-function 'org-open-file
-                org-latex-pdf-process (list "latexmk -shell-escape -bibtex -f -pdf %f")))
+                org-latex-pdf-process (list "latexmk -shell-escape -bibtex -f -pdf %f")
+                org-ref-get-pdf-filename-function 'org-ref-get-pdf-file-name-helm-bibtex
+                org-ref-completion-library 'org-ref-helm-cite))
+  
   
   
 #+end_src
 
-
-
-*** Org-Roam
-**** Deft
+**** Open PDF at Point
+This function is needed to help fix the problem of finding a PDF file to edit (the =F1= key behavior).
 
 #+begin_src emacs-lisp :tangle init.el
-    
-    (use-package deft
-      :bind ("<f8>" . deft)
-      :commands (deft)
-      :config (setq deft-directory "~/Dropbox/"
-                    deft-extensions '("txt" "tex" "org")
-                    deft-recursive t
-                    deft-use-filename-as-title t))
-    
+
+  (defun bibtex-completion-open-pdf-of-entry-at-point ()
+    (interactive)
+    (save-excursion
+      (bibtex-beginning-of-entry)
+      (when (looking-at bibtex-entry-maybe-empty-head)
+        (bibtex-completion-open-pdf (list (bibtex-key-in-head))))))
+
+#+end_src
+
+*** Org-Roam
+**** COMMENT Deft
+
+#+begin_src emacs-lisp :tangle init.el
+  
+  (use-package deft
+    :bind ("<f8>" . deft)
+    :commands (deft)
+    :config (setq deft-directory "~/Dropbox/"
+                  deft-extensions '("txt" "tex" "org")
+                  deft-recursive t
+                  deft-use-filename-as-title t))
+  
 #+end_src
 
 
@@ -1880,6 +1974,7 @@ Just cause things need to be in sync
 **** Roam
 
 #+begin_src emacs-lisp :tangle init.el
+
   (use-package org-roam
     :after org
     :straight t
@@ -1914,10 +2009,15 @@ Just cause things need to be in sync
             ("C-c n c" . org-roam-dailies-capture-today)
             ("C-c n g" . org-roam-graph)
             ("C-c n i" . org-roam-node-insert)
-            ("C-c n I" . org-roam-insert-immediate)))
+            ("C-c n I" . org-roam-node-insert-immediate)))
   
   
-  
+  (defun org-roam-node-insert-immediate (arg &rest args)
+    (interactive "P")
+    (let ((args (push arg args))
+          (org-roam-capture-templates (list (append (car org-roam-capture-templates)
+                                                    '(:immediate-finish t)))))
+      (apply #'org-roam-node-insert args)))
 #+end_src
 
 
@@ -1925,9 +2025,10 @@ Just cause things need to be in sync
 ***** Org-Roam-Bibtex
 
 #+begin_src emacs-lisp :tangle init.el
+
   (use-package org-roam-bibtex
     :straight t
-    :after org-roam
+    :after (org-roam org)
     :hook (org-roam-mode . org-roam-bibtex-mode)
     :config (setq orb-note-actions-interface 'hydra
                   orb-preformat-keywords '("citekey" "title" "url"
@@ -1939,8 +2040,25 @@ Just cause things need to be in sync
     :bind (:map org-mode-map
                 (("C-c n a" . orb-note-actions))))
   
+  (setq bibtex-completion-notes-path "/home/david/Dropbox/Org/roam/"
+        bibtex-completion-bibliography "/home/david/Dropbox/Org/References/bibliography.bib"
+        bibtex-compltion-pdf-field "file"
+        bibtex-completion-notes-template-multiple-files
+        (concat
+         "#+TITLE: {title}\n"
+         "#+ROAM_KEY: cite:${=key=}\n"
+         "* TODO Notes\n"
+         ":PROPERTIES:\n"
+         ":Custom_ID: ${=key=}\n"
+         ":NOTER_DOCUMENT: %(orb-process-file-field \"${=key=}\")\n"
+         ":AUTHOR: ${author-abbrev}\n"
+         ":JOURNAL: ${journaltitle}\n"
+         ":DATE: ${date}\n"
+         ":YEAR: ${year}\n"
+         ":DOI: ${doi}\n"
+         ":URL: ${url}\n"
+         ":END:\n\n"))
 #+end_src
-
 
 
 **** Roam-UI
@@ -1959,8 +2077,7 @@ Just cause things need to be in sync
 #+begin_src emacs-lisp :tangle init.el
   
   (use-package simple-httpd
-     :straight t
-     )
+     :straight t)
   
 #+end_src
 
@@ -1971,11 +2088,12 @@ Just cause things need to be in sync
     #+begin_src emacs-lisp :tangle init.el
       (use-package org-roam-ui
         :straight (:host github :repo "org-roam/org-roam-ui" :branch "main" :files ("*.el" "out"))
+        :after org-roam
         :config (setq org-roam-ui-sync-theme t
                       org-roam-ui-follow t
                       org-roam-ui-update-on-save t
                       org-roam-ui-open-on-start t))
-  
+      
     #+end_src
 
 
@@ -1983,7 +2101,7 @@ Just cause things need to be in sync
 *** Org Superstar
 
 #+begin_src emacs-lisp :tangle init.el
-
+  
   (use-package org-superstar
     :straight t
     :after org
@@ -1993,8 +2111,8 @@ Just cause things need to be in sync
           org-superstar-headline-bullets-list '("◉" "○" "●" "○" "●" "○" "●")
           org-indent-mode-turns-on-hiding-stars t)
     :hook (org-mode . org-superstar-mode))
-    
-
+  
+  
 #+end_src
 
 
@@ -2002,11 +2120,16 @@ Just cause things need to be in sync
 *** Org Noter
     A really nice package for annotating pdf files.
 
-    #+begin_src emacs-lisp :tangle init.el
+    #+begin_src emacs-lisp :tangle no
+      ;; not sure i need this actually . . .
       
       (use-package org-noter
         :straight t
-        :after org)
+        :after (:any org pdf-view)
+        :config (setq org-noter-notes-window-location 'other-frame
+                      org-noter-awlays-create-frame nil
+                      org-noter-awlays-hide-other nil
+                      org-noter-notes-search-path "/home/david/Dropbox/"))
       
     #+end_src
 
@@ -2019,14 +2142,30 @@ Just cause things need to be in sync
       
       (use-package org-tree-slide
         :straight t
-        :defer t
         :defines (org-image-actual-width)
         :config (org-image-actual-width nil))
       
     #+end_src
 
+*** HTMLIZE
 
+This isn't really an Org thing, but it is useful for getting output correct from Org publish, so I'm putting it here as sort of a natural fit.
+
+#+begin_src emacs-lisp :tangle init.el
+
+(use-package htmlize
+  :straight t
+  :init (setq htmlize-output-type 'css))
+
+#+end_src
     
+** Projectile
+#+begin_src emacs-lisp :tangle init.el
+  
+  (use-package projectile
+    :straight t)
+  
+#+end_src
 ** Programming
 *** Tools for Structured Text
 **** Highlight Matching Braces
@@ -2034,13 +2173,13 @@ Just cause things need to be in sync
 Rainbow delimiters makes finding matching delimiters easy on the eyes. This is a must for things like LaTeX, Lisp, and pretty much any language where braces inside of braces are the norm.
 
 #+begin_src emacs-lisp :tangle init.el
-
-     (use-package rainbow-delimiters
-       :straight t 
-       :config
-       (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
- 
-
+  
+  (use-package rainbow-delimiters
+    :straight t 
+    :config
+    (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
+  
+  
 #+end_src
 
 
@@ -2057,37 +2196,35 @@ Rainbow delimiters makes finding matching delimiters easy on the eyes. This is a
 A porciline for git. Basically, along with org-mode, this is one of the big reasons to use Emacs. It's a killer app all on its own.
 
 #+begin_src emacs-lisp :tangle init.el
-
-     (use-package magit
-       :straight t 
-       :defer t
-       :bind (("C-x g" . magit-status)))
- 
-
+  
+  (use-package magit
+    :straight t 
+    :bind (("C-x g" . magit-status)))
+  
 #+end_src
 
 
 **** YASnippet
 
 #+begin_src emacs-lisp :tangle init.el
-
+  
   (use-package yasnippet
     :straight t
     :config (setq yas-snippet-dirs '(+my-snippets-dir))
     (yas-global-mode 1)
     (yas-reload-all)
     :hook (prog-mode . yas-minor-mode))
-           
-
-
-
+  
+  
+  
+  
 #+end_src
 
 
 **** LSP
 
      #+begin_src emacs-lisp :tangle init.el
-
+       
        (use-package lsp-mode
          :straight t
          :init (setq lsp-keymap-prefix "C-c l")
@@ -2096,43 +2233,43 @@ A porciline for git. Basically, along with org-mode, this is one of the big reas
          (ess-julia-mode . lsp)
          (lsp-mode . lsp-enable-which-key-integration)
          :commands lsp)
-
+       
        (use-package lsp-ui :commands lsp-ui-mode
          :straight t)
-
+       
        (use-package helm-lsp :commands helm-lsp-workspace-symbol
          :straight t)
-
+       
        (use-package lsp-treemacs :commands lsp-treemacs-errors-list
          :straight t)
-
+       
        (use-package lsp-julia
          :straight t)
-
+       
        (use-package lsp-jedi
          :straight t
          :config (with-eval-after-load "lsp-mode"
                    (add-to-list 'lsp-disabled-clients 'pyls)
                    (add-to-list 'lsp-enabled-clients 'jedi)))
-
+       
      #+end_src
 
      
 ***** Keybindings
 
      #+begin_src emacs-lisp :tangle init.el
-
+       
        (general-define-key
         :states '(normal visual)
-        "l"  '(:ignore t :which-key "lsp")
-        "ld" 'xref-find-definitions
-        "lr" 'xref-find-references
-        "ln" 'lsp-ui-find-next-reference
-        "lp" 'lsp-ui-find-prev-reference
-        "lv" 'counsel-variable-documentation
-        "le" 'lsp-ui-flycheck-list
-        "lS" 'lsp-ui-sideline-symbol
-        "lX" 'lsp-ui-sideline-code-action)
+        "L"  '(:ignore t :which-key "lsp")
+        "Ld" 'xref-find-definitions
+        "Lr" 'xref-find-references
+        "Ln" 'lsp-ui-find-next-reference
+        "Lp" 'lsp-ui-find-prev-reference
+        "Lv" 'counsel-variable-documentation
+        "Le" 'lsp-ui-flycheck-list
+        "LS" 'lsp-ui-sideline-symbol
+        "LX" 'lsp-ui-sideline-code-action)
      #+end_src 
 
 
@@ -2145,11 +2282,15 @@ A porciline for git. Basically, along with org-mode, this is one of the big reas
       (setq inferior-lisp-program "/usr/bin/sbcl")
 
       #+end_src
-
       
 ***** SLY
 
       #+begin_src emacs-lisp :tangle init.el
+        
+        (defun +my-temp-buffer-p (buf)
+          "Return non-nil if bufffer is temporary."
+          (equal (substring (buffer-name buf) 0 1) " "))
+        
         (defun +common-lisp--cleanup-sly-maybe-h ()
           "Kill processes and leftover buffers when killing the last sly buffer."
           (unless (cl-loop for buf in (delq (current-buffer) (buffer-list))
@@ -2163,12 +2304,12 @@ A porciline for git. Basically, along with org-mode, this is one of the big reas
                     (cl-loop for buf in (delq (current-buffer) (buffer-list))
                              if (buffer-local-value 'sly-mode buf)
                              collect buf)))))
-
-
-
+        
+        
+        
         (defun +common-lisp-init-sly-h ()
           "Attempt to auto-start sly when opening a lisp buffer."
-          (cond ((or (doom-temp-buffer-p (current-buffer))
+          (cond ((or (+my-temp-buffer-p (current-buffer))
                      (sly-connected-p)))
                 ((executable-find (car (split-string inferior-lisp-program)))
                  (let ((sly-auto-start 'always))
@@ -2176,20 +2317,20 @@ A porciline for git. Basically, along with org-mode, this is one of the big reas
                    (add-hook 'kill-buffer-hook #'+common-lisp--cleanup-sly-maybe-h nil t)))
                 ((message "WARNING: Couldn't find `inferior-lisp-program' (%s)"
                           inferior-lisp-program))))
-
+        
         (use-package sly
           :straight t
           :init (setq sly-kill-without-query t
                       sly-net-coding-system 'utf-8-unix
                       sly-complete-symbol-function 'sly-simple-completions
                       )
-  
+        
           :hook (lisp-mode . sly-editing-mode)
           (lisp-mode . rainbow-delimiters-mode)
           (sly-mode .  +common-lisp-init-sly-h)
           (sly-mode . evil-normalize-keymaps))
-
-
+        
+        
         (use-package sly-repl-ansi-color
           :straight t
           :init (add-to-list 'sly-contribs 'sly-repl-ansi-color))
@@ -2280,6 +2421,7 @@ A porciline for git. Basically, along with org-mode, this is one of the big reas
       
 **** TODO ELISP
 
+
 ** Dashboard
 
 *** Page Break Lines
@@ -2316,35 +2458,169 @@ This is just a nice Dashboard ala Doom or Spacemacs
   
 #+end_src
 
+** EXWM
 
-** Other Stuff
+*** Focus Follow Mouse
 
+Title says it all. This needs to be loaded before EXWM. 
 
-   #+begin_src emacs-lisp :tangle init.el          
-     
-          
-     (use-package projectile
-       :straight t
-        )
-     
-    
-     
-     (use-package which-key
-       :straight t
-       :config (which-key-setup-side-window-bottom)
-       (setq which-key-show-early-on-C-h t
-         which-key-idle-secondary-delay 0.05)
-       :init (which-key-mode))
-     
-     
-     (setq debug-on-error nil)
-     
-     
+#+begin_src emacs-lisp :tangle no 
+  
+  (setq mouse-autoselect-window t
+        focus-follows-mouse t)
+  
 #+end_src
 
+*** EXWM Itself
+Make Emacs my XWindow Manager
+
+#+begin_src emacs-lisp :tangle no
+  
+  (use-package xelb
+    :straight t
+  
+  (use-package exwm
+    :straight t
+  
+  
+  
+#+end_src
+
+*** EXWM Configuration
+
+#+begin_src emacs-lisp :tangle no 
+  
+  ;; Turn on dislay time mode
+  (setq display-time-default-load-average nil)
+  (display-time-mode t)
+  
+  (require 'exwm-config)
+  
+  ;; set the initial number of workspaces
+  (setq exwm-workspace-number 4)
+  
+  ;; All buffers created in EXWM mode are named "*EXWM*". You may want to
+  ;; change it in `exwm-update-class-hook' and `exwm-update-title-hook', which
+  ;; are run when a new X window class name or title is available.  Here's
+  ;; some advice on this topic:
+  ;; + Always use `exwm-workspace-rename-buffer` to avoid naming conflict.
+  ;; + For applications with multiple windows (e.g. GIMP), the class names of
+                                          ;    all windows are probably the same.  Using window titles for them makes
+  ;;   more sense.
+  ;; In the following example, we use class names for all windows except for
+  ;; Java applications and GIMP.
+  
+  (add-hook 'exwm-update-class-hook
+            (lambda ()
+              (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                          (string= "gimp" exwm-instance-name))
+                (exwm-workspace-rename-buffer exwm-class-name))))
+  (add-hook 'exwm-update-title-hook
+            (lambda ()
+              (when (or (not exwm-instance-name)
+                        (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                        (string= "gimp" exwm-instance-name))
+                (exwm-workspace-rename-buffer exwm-title))))
+  
+  ;; Global keybindings can be defined with `exwm-input-global-keys'.
+  ;; Here are a few examples:
+  (setq exwm-input-global-keys
+        `(
+          ;; Bind "s-r" to exit char-mode and fullscreen mode.
+          ([?\s-r] . exwm-reset)
+          ;; Bind "s-w" to switch workspace interactively.
+          ([?\s-w] . exwm-workspace-switch)
+          ;; Bind "s-0" to "s-9" to switch to a workspace by its index.
+          ,@(mapcar (lambda (i)
+                      `(,(kbd (format "s-%d" i)) .
+                        (lambda ()
+                          (interactive)
+                          (exwm-workspace-switch-create ,i))))
+                    (number-sequence 0 9))
+          ;; Bind "s-&" to launch applications ('M-&' also works if the output
+          ;; buffer does not bother you).
+          ([?\s-&] . (lambda (command)
+                       (interactive (list (read-shell-command "$ ")))
+                       (start-process-shell-command command nil command)))
+          ;; Bind "s-<f2>" to "slock", a simple X display locker.
+          ([s-f2] . (lambda ()
+                      (interactive)
+                      (start-process "" nil "/usr/bin/slock")))))
+  
+  
+  ;; To add a key binding only available in line-mode, simply define it in
+  ;; `exwm-mode-map'.  The following example shortens 'C-c q' to 'C-q'.
+  (define-key exwm-mode-map [?\C-q] #'exwm-input-send-next-key)
+  
+  ;; The following example demonstrates how to use simulation keys to mimic
+  ;; the behavior of Emacs.  The value of `exwm-input-simulation-keys` is a
+  ;; list of cons cells (SRC . DEST), where SRC is the key sequence you press
+  ;; and DEST is what EXWM actually sends to application.  Note that both SRC
+  ;; and DEST should be key sequences (vector or string).
+  (setq exwm-input-simulation-keys
+        '(
+          ;; movement
+          ([?\C-b] . [left])
+          ([?\M-b] . [C-left])
+          ([?\C-f] . [right])
+          ([?\M-f] . [C-right])
+          ([?\C-p] . [up])
+          ([?\C-n] . [down])
+          ([?\C-a] . [home])
+          ([?\C-e] . [end])
+          ([?\M-v] . [prior])
+          ([?\C-v] . [next])
+          ([?\C-d] . [delete])
+          ([?\C-k] . [S-end delete])
+          ;; cut/paste.
+          ([?\C-w] . [?\C-x])
+          ([?\M-w] . [?\C-c])
+          ([?\C-y] . [?\C-v])
+          ;; search
+          ([?\C-s] . [?\C-f])))
+  
+  ;; You can hide the minibuffer and echo area when they're not used, by
+  ;; uncommenting the following line.
+  (setq exwm-workspace-minibuffer-position 'bottom)
+  
+  ;; Do not forget to enable EXWM. It will start by itself when things are
+  ;; ready.  You can put it _anywhere_ in your configuration.
+  ;;(exwm-enable) -- this is done in .xinitrc and then I start an emacs client there
+#+end_src
+
+ 
+*** RandR
+
+multi-screen support
+
+#+begin_src emacs-lisp :tangle no 
+  
+  (require exwm-randr)
+  (exwm-randr-workspace-output-plist '(0 "DP-0"))
+  (exwm-randr-enable)
+  (add-hook 'exwm-randr-screen-change-hook  #'exwm-change-screen-hook)
+  
+  
+  (defun exwm-change-screen-hook ()
+    (let ((xrandr-output-regexp "\n\\([^ ]+\\) connected ")
+          default-output)
+      (with-temp-buffer
+        (call-process "xrandr" nil t nil)
+        (goto-char (point-min))
+        (re-search-forward xrandr-output-regexp nil 'noerror)
+        (setq default-output (match-string 1))
+        (forward-line)
+        (if (not (re-search-forward xrandr-output-regexp nil 'noerror))
+            (call-process "xrandr" nil nil nil "--output" default-output "--auto")
+          (call-process
+           "xrandr" nil nil nil
+           "--output" (match-string 1) "--primary" "--auto"
+           "--output" default-output "--off")
+          (setq exwm-randr-workspace-output-plist (list 0 (match-string 1)))))))
+#+end_src
 
 ** Load Custom File
-One of the very last things to do is to load the custom file
+One of the very last things to do is to load the custom fil
 
 #+begin_src emacs-lisp :tangle init.el
 
@@ -2352,8 +2628,15 @@ One of the very last things to do is to load the custom file
 
 #+end_src
 
+** Server Mode
 
-** TODO Server Mode
+#+begin_src emacs-lisp :tangle init.el
+  
+  (setq server-name "frodo")
+  
+  ;;(server-start) I have emacs started by systemd now so this is not needed
+  
+#+end_src
 
 # Local Variables:
 # eval: (add-hook 'after-save-hook (lambda () (my/tangle-init)))
