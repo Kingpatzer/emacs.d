@@ -2,6 +2,9 @@
 
 (setq gc-cons-threshold most-positive-fixnum)
 
+(setq comp-deferred-compilation nil
+native-comp-deferred-compilation nil)
+
 ;;(setq warning-minimum-level :emergency)
 
 (setq user-emacs-directory (file-name-directory load-file-name))

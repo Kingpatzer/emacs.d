@@ -33,7 +33,7 @@ As of Emacs 27 (I think?) early-init.el is loaded earlier in the load sequence a
 
     The following two variables, when set to ~nil~ ensure that /Emacs/ ~.elc~ files are compiled *asynchronously*. This should help with performance significantly whenever a package with a large number of ~.el~ files needs to be compiled for whatever reason.
 
-#+begin_src emacs-lisp :tangle early_init.el
+#+begin_src emacs-lisp :tangle early-init.el
 
       (setq comp-deferred-compilation nil
       native-comp-deferred-compilation nil)
