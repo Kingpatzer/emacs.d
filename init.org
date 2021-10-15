@@ -15,6 +15,7 @@ As of Emacs 27 (I think?) early-init.el is loaded earlier in the load sequence a
     
   #+end_src  
 
+test
 
 
 ** Garbage Collection Optimization
@@ -766,14 +767,14 @@ A collection of Doom and Spacemacs hacks to speed things up slightly, 'cause fas
 ** Recent Files  
 
  #+begin_src emacs-lisp 
-  ;;
-  ;; recent file
-  ;;
-  
-  (defvar recentf-max-menu-items) 	;dummy variable to kill warnings
-  (recentf-mode 1)
-  (setq recentf-max-menu-items 25)
-  
+   ;;
+   ;; recent file
+   ;;
+
+   (recentf-mode 1)
+   (setq-default recentf-max-saved-items 500
+                 recentf-max-menu-items 25)
+
   #+end_src
 
   #+RESULTS:
@@ -1040,14 +1041,20 @@ Evil mode requires using an undo package. I like undo-tree.
 
 
  #+begin_src emacs-lisp :tangle init.el
-   
-   
+
+   (setq +my-undo-tree-backup-dir (concat +my-etc-dir "undo-tree/"))
+
+
    (use-package undo-tree
      :straight t
-     :init (setq undo-tree-auto-save-history t)
+     :init (setq undo-tree-auto-save-history t
+                 undo-tree-history-directory-alist `(("." . ,+my-undo-tree-backup-dir)))
+     (add-hook 'write-file-functions #'undo-tree-save-history-hook)
+     (add-hook 'find-file-hook #'undo-tree-load-history-hook)
      (global-undo-tree-mode 1))
-   
-  #+end_src 
+
+  #+end_src
+
 
   No for some of the evil stuff itself
 
@@ -1363,7 +1370,7 @@ RefTeX helps to create unique labels and to find the correct key for references.
 
       (use-package ebib
         :straight t
-        :init
+        :init (setq ebib-preload-bib-files '("/home/david/Dropbox/Org/References/bibliography.bib"))
         :bind (("C-c e" . ebib)))
 
 #+end_src
@@ -1371,27 +1378,41 @@ RefTeX helps to create unique labels and to find the correct key for references.
 
 
 
-*** TODO CDLatex
-
-*** TODO Org-CDLatex
-
 *** Company AUCTex
 
 Company is a completion framework that is loaded a bit later. Therefore this needs the ~:after~ keyword. 
 
 #+begin_src emacs-lisp :tangle init.el
   
-  (use-package company-auctex
-         :straight t)
+    (use-package company-auctex
+           :straight t
+           :after (company tex-site))
          
 #+end_src
 
 
 
-*** TODO Company Math
+*** Company Math
+This is for making entering math stuff in LaTeX a bit faster.
+#+begin_src emacs-lisp :tangle init.el
+  (use-package company-math
+    :straight t
+    :after company
+    :init (add-to-list 'company-backends 'company-math-symbols-unicode))
 
-*** TODO EVIL Tex
 
+
+#+end_src
+*** EVIL Tex
+
+Just a few tweaks for Evil mode when working in LaTex.
+#+begin_src emacs-lisp :tangle init.el
+  (use-package evil-tex
+    :straight t
+    :after (evil tex-site)
+    :hook (LaTeX-mode . evil-tex-mode))
+
+#+end_src
 *** PDF Tools
 
 #+begin_src emacs-lisp :tangle init.el
@@ -1737,8 +1758,9 @@ IBuffer is awesome and builtin. So no package is needed. Just a hydra:
 
 #+end_src
 
+** Trees
+*** Treemacs
 
-** Treemacs
    #+begin_src emacs-lisp :tangle init.el
      
      (use-package treemacs
@@ -1843,7 +1865,38 @@ IBuffer is awesome and builtin. So no package is needed. Just a hydra:
        :config (treemacs-set-scope-type 'Perspectives))
      
    #+end_src
+*** Filetree viewer
+A package for viewing any list of files as a tree.
+**** Install the package
 
+#+begin_src emacs-lisp :tangle init.el
+
+  (use-package filetree
+    :straight t
+    :init (setq filetree-notes-file "/home/david/Dropbox/Org/filtree-notes.org"
+                filetree-info-window t
+                filetree-use-all-the-icons t
+                filetree-show-remote-file-info t)
+    :bind (("C-c f r" . filetree-show-recentf-files)
+           ("C-c f f" . filetree-select-file-list)
+           ("C-c f d" . filetree-show-cur-dir)
+           ("C-c f D" . filetree-show-cur-dir-recursively)
+           ("C-c f n" . filetree-show-files-with-notes)))
+  
+#+end_src
+
+**** A little helper function to pull up notes
+
+This function pulls up notes files related to the file. Maybe this should be replaced with Org-noter . . .
+
+#+begin_src emacs-lisp :tangle init.el
+
+(global-set-key (kbd "C-c f '") (lambda ()
+                                       "Toggle filetree-info-buffer and switch to it if active"
+                                       (interactive)
+                                       (filetree-toggle-info-buffer t)))
+
+#+end_src
 
 ** Org Mode
 *** Basic Org Mode
@@ -1903,7 +1956,6 @@ IBuffer is awesome and builtin. So no package is needed. Just a hydra:
 #+end_src
 
 
-
 *** Org-Contrib
 Just cause things need to be in sync
 
@@ -1914,7 +1966,6 @@ Just cause things need to be in sync
     :straight t)
   
 #+end_src
-
 
 
 *** Org-Ref
@@ -2097,7 +2148,6 @@ This function is needed to help fix the problem of finding a PDF file to edit (t
     #+end_src
 
 
-
 *** Org Superstar
 
 #+begin_src emacs-lisp :tangle init.el
@@ -2114,7 +2164,6 @@ This function is needed to help fix the problem of finding a PDF file to edit (t
   
   
 #+end_src
-
 
 
 *** Org Noter
@@ -2134,7 +2183,6 @@ This function is needed to help fix the problem of finding a PDF file to edit (t
     #+end_src
 
 
-    
 *** Org Tree Slide (Presentation)
     =Org Tree Slide Mode= is for giving presentations from within org-mode using C-> and C-<
 
@@ -2182,9 +2230,7 @@ Rainbow delimiters makes finding matching delimiters easy on the eyes. This is a
   
 #+end_src
 
-
 **** TODO Commenting
-
 **** TODO Parinfer
 
 **** TODO Whitespaces
@@ -2203,7 +2249,6 @@ A porciline for git. Basically, along with org-mode, this is one of the big reas
   
 #+end_src
 
-
 **** YASnippet
 
 #+begin_src emacs-lisp :tangle init.el
@@ -2219,7 +2264,6 @@ A porciline for git. Basically, along with org-mode, this is one of the big reas
   
   
 #+end_src
-
 
 **** LSP
 
@@ -2271,7 +2315,6 @@ A porciline for git. Basically, along with org-mode, this is one of the big reas
         "LS" 'lsp-ui-sideline-symbol
         "LX" 'lsp-ui-sideline-code-action)
      #+end_src 
-
 
 *** Language Specific Tools
 **** Common Lisp
@@ -2421,7 +2464,7 @@ A porciline for git. Basically, along with org-mode, this is one of the big reas
       
 **** TODO ELISP
 
-
+**** Julia
 ** Dashboard
 
 *** Page Break Lines
@@ -2459,7 +2502,7 @@ This is just a nice Dashboard ala Doom or Spacemacs
 #+end_src
 
 ** EXWM
-
+This is all not working at the moment and is completely disabled  until I decide if I want to mess with it or not. 
 *** Focus Follow Mouse
 
 Title says it all. This needs to be loaded before EXWM. 
@@ -2588,7 +2631,6 @@ Make Emacs my XWindow Manager
   ;;(exwm-enable) -- this is done in .xinitrc and then I start an emacs client there
 #+end_src
 
- 
 *** RandR
 
 multi-screen support
@@ -2641,4 +2683,19 @@ One of the very last things to do is to load the custom fil
 # Local Variables:
 # eval: (add-hook 'after-save-hook (lambda () (my/tangle-init)))
 # End:
+
+
+** KeyBinding Cleanup
+ The very last thing to do before leaving is to clean up any keybindings that have been screwed up by various packages and make sure that everything is the way I want it to be.
+
+ 
+*** Fix "Other Window"
+Not sure where above that =C-x o= got redefined, but let's fix it here.
+
+ #+begin_src emacs-lisp :tangle init.el
+
+   (global-unset-key (kbd "C-x o"))
+   (global-set-key (kbd "C-x o") 'other-window)
+
+ #+end_src
 

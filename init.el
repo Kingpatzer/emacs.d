@@ -615,9 +615,15 @@ Deactivates at first failt o prevent an infinite loop."
 (interactive)
 (message "Arrow keys are bad, you know?"))
 
+(setq +my-undo-tree-backup-dir (concat +my-etc-dir "undo-tree/"))
+
+
 (use-package undo-tree
   :straight t
-  :init (setq undo-tree-auto-save-history t)
+  :init (setq undo-tree-auto-save-history t
+              undo-tree-history-directory-alist `(("." . ,+my-undo-tree-backup-dir)))
+  (add-hook 'write-file-functions #'undo-tree-save-history-hook)
+  (add-hook 'find-file-hook #'undo-tree-load-history-hook)
   (global-undo-tree-mode 1))
 
 (setq evil-want-keybinding nil)
@@ -814,11 +820,22 @@ Deactivates at first failt o prevent an infinite loop."
 
 (use-package ebib
   :straight t
-  :init
+  :init (setq ebib-preload-bib-files '("/home/david/Dropbox/Org/References/bibliography.bib"))
   :bind (("C-c e" . ebib)))
 
 (use-package company-auctex
-       :straight t)
+       :straight t
+       :after (company tex-site))
+
+(use-package company-math
+  :straight t
+  :after company
+  :init (add-to-list 'company-backends 'company-math-symbols-unicode))
+
+(use-package evil-tex
+  :straight t
+  :after (evil tex-site)
+  :hook (LaTeX-mode . evil-tex-mode))
 
 (use-package pdf-tools
     :straight t
@@ -1149,6 +1166,23 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
   :ensure t
   :config (treemacs-set-scope-type 'Perspectives))
 
+(use-package filetree
+  :straight t
+  :init (setq filetree-notes-file "/home/david/Dropbox/Org/filtree-notes.org"
+              filetree-info-window t
+              filetree-use-all-the-icons t
+              filetree-show-remote-file-info t)
+  :bind (("C-c f r" . filetree-show-recentf-files)
+         ("C-c f f" . filetree-select-file-list)
+         ("C-c f d" . filetree-show-cur-dir)
+         ("C-c f D" . filetree-show-cur-dir-recursively)
+         ("C-c f n" . filetree-show-files-with-notes)))
+
+(global-set-key (kbd "C-c f '") (lambda ()
+                                       "Toggle filetree-info-buffer and switch to it if active"
+                                       (interactive)
+                                       (filetree-toggle-info-buffer t)))
+
 (use-package org
     :straight t 
     :defer t
@@ -1467,3 +1501,6 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
 (setq server-name "frodo")
 
 ;;(server-start) I have emacs started by systemd now so this is not needed
+
+(global-unset-key (kbd "C-x o"))
+(global-set-key (kbd "C-x o") 'other-window)
