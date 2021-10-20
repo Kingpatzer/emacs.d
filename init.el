@@ -112,7 +112,7 @@ envvar will enable this at startup.")
 (defconst +my-local-dir
   (let ((localdir (getenv-internal "+MYLOCALDIR")))
 (if localdir
-	(expand-file-name (file-name-as-directory localdir))
+    (expand-file-name (file-name-as-directory localdir))
   (concat +my-emacs-dir ".local/")))
   "Root directory for local storage.
 Use this as a storage location for this system's installation of +My Emacs.
@@ -134,13 +134,13 @@ Use this for files that change often, like cache files. Must end with a slash.")
 (defconst +my-private-dir
   (let ((+mydir (getenv-internal "+MYDIR")))
 (if +mydir
-	(expand-file-name (file-name-as-directory +mydir))
+    (expand-file-name (file-name-as-directory +mydir))
   (or (let ((xdgdir
-		 (expand-file-name "~/.config/+my/"
-				   (or (getenv-internal "XDG_CONFIG_HOME")
-				   "~/.config/+my/"))))
-	(if (file-directory-p xdgdir) xdgdir))
-	  "~/.config/+my/")))
+         (expand-file-name "~/.config/+my/"
+                   (or (getenv-internal "XDG_CONFIG_HOME")
+                   "~/.config/+my/"))))
+    (if (file-directory-p xdgdir) xdgdir))
+      "~/.config/+my/")))
   "Where your private configuration is placed.
 Defaults to ~/.config/+my, ~/.+my.d or the value of the +MYDIR envvar;
 whichever is found first. Must end in a slash.")
@@ -159,8 +159,12 @@ which is loaded at startup (if it exists). This is helpful if Emacs can't
 users).")
 
 (defconst +my-snippets-dir
-  (concat +my-private-dir "snippets")
+  (concat +my-emacs-dir "snippets")
   "Where yasnippets looks for my private snippets.")
+
+(defconst +my-etc-dir
+  (concat +my-emacs-dir "etc/")
+  "Where  stuff that just needs to hang about can go.")
 
 (defvar +my-first-input-hook nil
   "Transient hooks run before the first user input.")
@@ -242,7 +246,7 @@ users).")
     initial-scratch-message nil)
 
 (setq-default async-byte-compile-log-file  (concat +my-etc-dir "async-bytecomp.log")
-  custom-file                  (concat +my-private-dir "custom.el")
+  custom-file                  (concat +my-etc-dir "custom.el")
   desktop-dirname              (concat +my-etc-dir "desktop")
   desktop-base-file-name       "autosave"
   desktop-base-lock-name       "autosave-lock"
@@ -580,6 +584,9 @@ Deactivates at first failt o prevent an infinite loop."
       (if (and (buffer-file-name) (buffer-modified-p))
           (basic-save-buffer)))))
 (add-hook 'auto-save-hook '+my-full-auto-save)
+
+(use-package all-the-icons
+    :straight t)
 
 (use-package vterm
   :straight t
@@ -1362,8 +1369,8 @@ _t_: toggle    _._: toggle hydra _H_: help       C-o other win no-select
 
 (use-package org-tree-slide
   :straight t
-  :defines (org-image-actual-width)
-  :config (org-image-actual-width nil))
+  :defines org-image-actual-width
+  :init (setq org-image-actual-width nil))
 
 (use-package htmlize
   :straight t
