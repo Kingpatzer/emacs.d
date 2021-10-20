@@ -15,8 +15,7 @@ As of Emacs 27 (I think?) early-init.el is loaded earlier in the load sequence a
     
   #+end_src  
 
-test
-
+  
 
 ** Garbage Collection Optimization
 
